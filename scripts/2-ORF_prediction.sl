@@ -36,4 +36,4 @@ prodigal \
   -a ${OUTPUT}.faa \
   -d ${OUTPUT}.fna \
   -o ${OUTPUT}.gff \
-  -p meta
+  -p single
