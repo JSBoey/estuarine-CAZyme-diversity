@@ -6,13 +6,12 @@
 # Directories
 DIR=data/2.orf_prediction
 
-# Concatenate predictions and remove metadata
+# Concatenate predictions, remove metadata and asterisks
+# One can obtain statistics of whether it was a partial gene through the GFF3 annotations.
 cat $DIR/*.faa \
   | cut -f 1 -d ' ' \
+  | sed -e 's/\*//g' \
   > $DIR/allbins_pred.faa
-
-# Create another without asterisk for interproscan
-sed -e 's/\*//g' $DIR/allbins_pred.faa > $DIR/allbins_pred.noast.faa
 
 # Consolidate GFF data
 printf "bin\tnode\tsource\ttype\tstart\tend\tgff_score\tstrand\tphase\tseqid\tpartial\tstart_type\trbs_motif\trbs_spacer\tgc_cont\tconf\tscore\tcscore\tsscore\trscore\tuscore\ttscore\n" > $DIR/allbins_pred.metadata.tsv
