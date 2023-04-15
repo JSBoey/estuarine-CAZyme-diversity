@@ -1,11 +1,11 @@
 #!/bin/bash -e
 #SBATCH --job-name=dbcan
 #SBATCH --account=uoa00348
-#SBATCH --time=06:00:00
-#SBATCH --mem=8G
+#SBATCH --time=24:00:00
+#SBATCH --mem=16G
 #SBATCH --cpus-per-task=32
-#SBATCH --output=slurm_out/%x.%j..out
-#SBATCH --error=slurm_err/%x.%j..err
+#SBATCH --output=slurm_out/%x.%j.out
+#SBATCH --error=slurm_err/%x.%j.err
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=jian.sheng.boey@auckland.ac.nz
 
@@ -40,6 +40,8 @@ SZDB2=$(hmmstat ${DB2} | tail -n 1 | cut -f 1 -d ' ')
 
 # Run
 ## dbCAN
+printf "[%s]\tStart dbCAN annotation. Database size = %s\n" "$(date)" $SZDB1
+
 hmmsearch \
   -Z $SZDB1 \
   --cpu ${SLURM_CPUS_PER_TASK} \
@@ -48,7 +50,11 @@ hmmsearch \
   $DB1 \
   $INFILE
 
+printf "[%s]\tFinished dbCAN annotation. Domain table saved to %s\n" "$(date)" ${OUTFILE1}
+
 ## dbCAN-sub
+printf "[%s]\tStart dbCAN-sub annotation. Database size = %s\n" "$(date)" $SZDB2
+
 hmmsearch \
   -Z $SZDB2 \
   --cpu ${SLURM_CPUS_PER_TASK} \
@@ -56,3 +62,5 @@ hmmsearch \
   -o /dev/null \
   $DB2 \
   $INFILE
+
+printf "[%s]\tFinished dbCAN-sub annotation. Domain table saved to %s\n" "$(date)" ${OUTFILE2}
