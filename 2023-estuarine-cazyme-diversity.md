@@ -673,3 +673,164 @@ for i in data/3.annotation/*{CAZy,sulf,tcdb}*; do
   pigz --best -v -c -p 6 ${i} > main/data/${base}.gz
 done
 ```
+
+# 4. Gene and transcript count
+
+Using Bowtie2 to map metagenomic and metatranscriptomic reads back to bins. Then use Subread's featureCounts to generate counts.
+
+Create directory for this section.
+
+```bash
+mkdir -p data/4.feature_count/{index,bam,count}
+mkdir -p data/0.w{g,t}s
+```
+
+## 4.1. Index scaffolds
+
+```bash
+# Load module
+module purge
+module load Bowtie2/2.4.5-GCC-11.3.0
+
+# Create comma-separated line of fasta files
+files=$(find data/1.bins -type f -printf '%p,' | sed 's/,$//')
+
+# Index bins
+bowtie2-build --threads 8 $files data/4.feature_count/index/allbins_scaffolds
+```
+
+## 4.2. Map gene and transcript reads
+
+Copy the relevant read files from project directory:
+
+- Whole genome shotgun: `/nesi/project/ga02676/Waiwera_project/1.Qual_filtered_trimmomatic`
+- Whole transcriptome shotgun: `/nesi/project/ga02676/Waiwera_project/sze_works/1.WTS/3.trimmomatic`
+
+```bash
+rsync -av /nesi/project/ga02676/Waiwera_project/1.Qual_filtered_trimmomatic/*_R{1,2}* data/0.wgs
+rsync -av /nesi/project/ga02676/Waiwera_project/sze_works/1.WTS/3.trimmomatic/*.fastq.gz data/0.wts
+```
+
+The file names need to be standardised due to WTS and WGS having different naming conventions. This is the convention to follow:
+
+```
+<read_type>.<sample_type>.<site>_<biological_replicate>.<read_pair>.fastq.gz
+```
+
+Furthermore, water samples in WGS reads were run on separate lanes. Remember to concatenate files from the same samples.
+
+```bash
+# Working on WGS reads
+cd data/0.wgs
+
+# Concatenate reads from same water samples
+module purge
+module load pigz
+
+for i in {1..9}; do
+  for j in {1..2}; do
+    cat Filt.S${i}_L?_R${j}.fastq.gz > Filt.S${i}_R${j}.fastq.gz
+  done
+done
+
+# Remove individual lane reads
+rm Filt.S?_L?_R?.fastq.gz
+
+# Rename
+for i in Filt*; do
+  read_type=WGS
+  sample_type=Filt
+  site=$(echo $i | sed -E 's/.*S([0-9]).*/\1/g')
+  biol_rep=1
+  read_pair=$(echo $i | sed -E 's/.*(R[0-9]).*/\1/g')
+  newname=${read_type}.${sample_type}.S${site}_${biol_rep}.${read_pair}.fastq.gz
+  mv $i $newname
+done
+
+for i in Sed*; do
+  read_type=WGS
+  sample_type=Sed
+  site=$(echo $i | sed -E 's/.*S([0-9]).*/\1/g')
+  biol_rep=$(echo $i | sed -E 's/.*Sample([0-9]).*/\1/g')
+  read_pair=$(echo $i | sed -E 's/.*(R[0-9]).*/\1/g')
+  newname=${read_type}.${sample_type}.S${site}_${biol_rep}.${read_pair}.fastq.gz
+  mv $i $newname
+done
+
+# Working on WTS reads
+cd ../0.wts
+
+# Rename
+for i in *Filt*; do
+  read_type=WTS
+  sample_type=Filt
+  site=$(echo $i | sed -E 's/.*Filt([0-9]).*/\1/g')
+  biol_rep=1
+  read_pair=$(echo $i | sed -E 's/.*(R[0-9]).*/\1/g')
+  newname=${read_type}.${sample_type}.S${site}_${biol_rep}.${read_pair}.fastq.gz
+  mv $i $newname
+done
+
+for i in *Sed*; do
+  read_type=WTS
+  sample_type=Sed
+  site=$(echo $i | sed -E 's/.*S([0-9]).*/\1/g')
+  biol_rep=$(echo $i | sed -E 's/.*Sed([0-9]).*/\1/g')
+  read_pair=$(echo $i | sed -E 's/.*(R[0-9]).*/\1/g')
+  newname=${read_type}.${sample_type}.S${site}_${biol_rep}.${read_pair}.fastq.gz
+  mv $i $newname
+done
+
+```
+
+Contents of `scripts/4.2-map_reads.sl`:
+
+```bash
+#!/bin/bash -e
+#SBATCH --job-name=bt2map
+#SBATCH --account=uoa00348
+#SBATCH --time=02:00:00
+#SBATCH --mem=64G
+#SBATCH --cpus-per-task=36
+#SBATCH --output=slurm_out/%x.%j.%A_%a.out
+#SBATCH --error=slurm_err/%x.%j.%A_%a.err
+#SBATCH --array=0-65
+#SBATCH --mail-type=BEGIN,END,FAIL
+#SBATCH --mail-user=jian.sheng.boey@auckland.ac.nz
+#SBATCH --partition=milan
+
+# Modules
+module purge
+module load \
+  Bowtie2/2.4.5-GCC-11.3.0 \
+  SAMtools/1.16.1-GCC-11.3.0
+
+# Directories
+WGSDIR=data/0.wgs
+WTSDIR=data/0.wts
+INDEXDIR=data/4.feature_count/index
+BAMDIR=data/4.feature_count/bam
+
+export TMPDIR=data/tmp/bt2map/${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}
+mkdir -p $TMPDIR
+
+# Variables
+ARR=(${WGSDIR}/*.R1.fastq.gz ${WTSDIR}/*.R1.fastq.gz)
+INBASE=$(basename ${ARR[$SLURM_ARRAY_TASK_ID]} .R1.fastq.gz)
+INDIR=$(dirname ${ARR[$SLURM_ARRAY_TASK_ID]})
+INDEX=${INDEXDIR}/allbins_scaffolds
+READ1=${INDIR}/${INBASE}.R1.fastq.gz
+READ2=${INDIR}/${INBASE}.R2.fastq.gz
+OUTBAM=${BAMDIR}/${INBASE}.bam
+
+# Run
+bowtie2 -p $SLURM_CPUS_PER_TASK -x $INDEX -1 $READ1 -2 $READ2 \
+  | samtools view -@ $SLURM_CPUS_PER_TASK -bS - \
+  | samtools sort -@ $SLURM_CPUS_PER_TASK -o $OUTBAM -
+
+# Clean up
+rm -rf $TMPDIR
+
+```
+
+**Job ID**: 34936855
