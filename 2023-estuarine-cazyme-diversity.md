@@ -834,3 +834,138 @@ rm -rf $TMPDIR
 ```
 
 **Job ID**: 34936855
+
+## 4.3. Count features
+
+Use `Subread`'s `featureCounts` for this. Start by prepare simple annotation format (SAF) from compiled GFF.
+
+```bash
+# Load modules
+module purge
+module load Subread/2.0.3-GCC-11.3.0
+module load pigz
+
+# Directories
+ORFDIR=data/2.orf_prediction
+COUNTDIR=data/4.feature_count/count
+BAMDIR=data/4.feature_count/bam
+
+# Create SAF
+printf "GeneID\tChr\tStart\tEnd\tStrand\n" > $COUNTDIR/allbins_pred.saf
+
+cat $ORFDIR/allbins_pred.metadata.tsv \
+  | tail -n +2 \
+  | cut -f 2,5,6,8 \
+  | awk '{FS="\t"; OFS="\t"} {print $1, $gsub("_[0-9]+$", "", $1), $2, $3, $4}' \
+  >> $COUNTDIR/allbins_pred.saf
+
+# Count genes and transcripts
+for i in WGS WTS; do
+  featureCounts -p -T 12 \
+    -a $COUNTDIR/allbins_pred.saf \
+    -F SAF \
+    -o $COUNTDIR/${i}_count.tsv \
+    $BAMDIR/${i}.*.bam
+done
+
+# Clean up counts and funnel to results/
+for i in WGS WTS; do
+  grep -v '#' $COUNTDIR/${i}_count.tsv \
+    | sed -e 's/data\/4\.feature_count\/bam\///g' \
+    | sed -e 's/\.bam//g' \
+    | sed -e "s/${i}\.//g" \
+    | pigz -p 8 --best -c \
+    > results/${i}_clean_count.tsv.gz
+done
+```
+
+## Backup
+
+Need to backup all aligned reads and count files. BAM files are still quite big, so I will try to create CRAM files for backup purposes.
+
+### Back-up aligned reads
+
+```bash
+# Set-up directories and variables
+mkdir data/4.feature_count/cram
+
+BAMDIR=data/4.feature_count/bam
+CRAMDIR=data/4.feature_count/cram
+
+# Load SAMtools
+module purge
+module load SAMtools/1.16.1-GCC-11.3.0
+
+# Create the reference
+cat data/1.bins/Ww*.fna > $CRAMDIR/allbins_scaffolds.fna
+cd $CRAMDIR
+
+samtools faidx allbins_scaffolds.fna
+
+cd ../../../
+```
+
+Conversion of BAM to CRAM is performed using `scripts/4-bam2cram.sl`:
+
+```bash
+#!/bin/bash -e
+#SBATCH --job-name=bam2cram
+#SBATCH --account=uoa00348
+#SBATCH --time=30:00
+#SBATCH --mem=16G
+#SBATCH --cpus-per-task=32
+#SBATCH --output=slurm_out/%x.%j.%A_%a.out
+#SBATCH --error=slurm_err/%x.%j.%A_%a.err
+#SBATCH --array=0-65
+#SBATCH --mail-type=BEGIN,END,FAIL
+#SBATCH --mail-user=jian.sheng.boey@auckland.ac.nz
+#SBATCH --partition=milan
+
+# Modules
+module purge
+module load SAMtools/1.16.1-GCC-11.3.0
+
+# Directories
+BAMDIR=data/4.feature_count/bam
+CRAMDIR=data/4.feature_count/cram
+
+# Variables
+ARR=($BAMDIR/*.bam)
+INFILE=${ARR[$SLURM_ARRAY_TASK_ID]}
+INBASE=$(basename ${INFILE} .bam)
+OUTFILE=${CRAMDIR}/${INBASE}.cram
+
+# Run
+samtools view -C \
+  -@ $SLURM_CPUS_PER_TASK \
+  -T ${CRAMDIR}/allbins_scaffolds.fna \
+  -o ${OUTFILE} \
+  ${INFILE}
+
+```
+
+**Job ID**: 34958905
+
+> Remember to convert CRAM back to BAM in order to regenerate count files if necessary.
+> The reference seqeuences (compressed) are stored with the CRAM files.
+
+Archive files to `main/`
+
+```bash
+cd data/4.feature_count/cram
+
+# Compress reference
+module load pigz
+pigz --best -p 8 allbins_scaffolds.fna
+
+tar -cvf - * > ../../../main/data/read_alignment_cram.tar
+```
+
+### Back-up count files and summaries
+
+```bash
+cd data/4.feature_count/count
+
+module load pigz
+tar -cvf - * | pigz --best -c -p 8 > ../../../main/data/gene_transcript_counts.tar.gz
+```
