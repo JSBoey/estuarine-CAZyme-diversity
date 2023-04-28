@@ -969,3 +969,25 @@ cd data/4.feature_count/count
 module load pigz
 tar -cvf - * | pigz --best -c -p 8 > ../../../main/data/gene_transcript_counts.tar.gz
 ```
+
+
+--- 
+
+# Installing SignalP6-GPU
+
+```bash
+# Need to use virtual environment
+module load Python/3.9.9-gimkl-2020a
+
+cd bin/
+python -m venv sp6env
+
+# Install
+cd signalp6_fast
+pip install signalp-6-package
+
+
+```
+
+
+
