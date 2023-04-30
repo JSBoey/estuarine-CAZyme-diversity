@@ -674,6 +674,123 @@ for i in data/3.annotation/*{CAZy,sulf,tcdb}*; do
 done
 ```
 
+## 3.5 Signal peptides
+
+This is achieved using SignalP6.
+
+```bash
+#!/bin/bash -e
+#SBATCH --job-name=signalp6-gpu
+#SBATCH --account=uoa00348
+#SBATCH --time=6:00:00
+#SBATCH --mem=20G
+#SBATCH --cpus-per-task=12
+#SBATCH --gpus-per-node=1
+#SBATCH --output=slurm_out/%x.%j.out
+#SBATCH --error=slurm_err/%x.%j.err
+#SBATCH --mail-type=BEGIN,END,FAIL
+#SBATCH --mail-user=jian.sheng.boey@auckland.ac.nz
+
+# Modules
+module purge
+module load \
+  SeqKit/2.2.0 \
+  Python/3.9.9-gimkl-2020a \
+  CUDA/12.0.0
+
+# Environment
+source /nesi/project/uoa02469/Software/signalp6_fast-gpu/bin/activate
+
+# Directories
+INDIR=data/2.orf_prediction
+OUTDIR=data/3.annotation/signalp6
+TMPDIR=tmp/signalp6_$SLURM_JOB_ID
+
+mkdir -p {$OUTDIR,$TMPDIR}
+
+# Variables
+PREDFILE=$INDIR/allbins_pred.faa
+FORMAT=none
+ORGANISM=other
+MODE=fast
+BATCH_SIZE=500
+
+# Run
+## Split input into multiple files
+seqkit split2 -s 50000 $PREDFILE -O $TMPDIR
+
+## Run SignalP6 on part files
+for i in $TMPDIR/*.faa; do
+
+  # Get part name
+  part=$(basename $i .faa)
+
+  # Create part result directory
+  mkdir -p $TMPDIR/$part
+
+  # Run
+  signalp6 \
+    --fastafile $i \
+    --output_dir $TMPDIR/$part \
+    --format $FORMAT \
+    --organism $ORGANISM \
+    --mode $MODE \
+    --bsize $BATCH_SIZE \
+    --write_procs $SLURM_CPUS_PER_TASK
+
+  # Add part as prefix
+  for j in $TMPDIR/$part/*; do
+
+    # Get result basename
+    filename=$(basename $j)
+
+    # Move results to OUTDIR with part prefix
+    mv $j $OUTDIR/${part}_${filename}
+
+  done
+
+done
+
+```
+
+**Job ID**: 35006571
+
+Concatenate human readable outputs to `results/`
+
+```bash
+SIGNALP_DIR=data/3.annotation/signalp6
+
+# Set-up output files
+for i in $SIGNALP_DIR/allbins_pred.part_001*.{txt,gff3}; do
+  suffix=$(basename $i | sed -E 's/allbins_pred.part_[0-9]+_//g')
+  grep "#" $i > results/allbins_pred.signalp_${suffix}
+done
+
+# Concatenate 
+for i in $SIGNALP_DIR/allbins_pred.*.{txt,gff3}; do
+  suffix=$(basename $i | sed -E 's/allbins_pred.part_[0-9]+_//g')
+  prefix=$(echo $i | sed -e "s/${suffix}//g")
+  # Remove headers and "OTHER" from prediction_results.txt
+  grep -v "#" ${prefix}${suffix} \
+    | grep -v 'OTHER' \
+    >> results/allbins_pred.signalp_${suffix}
+done
+
+```
+
+### Backup
+
+```bash
+cd results/
+
+module purge
+module load pigz
+pigz --best -p 8 *.{txt,gff3}
+
+cd ../data/3.annotation/signalp6
+tar -cvf - * | pigz --best -p 8 -c > ../../../main/data/allbins_pred.signalp.tar.gz
+```
+
 # 4. Gene and transcript count
 
 Using Bowtie2 to map metagenomic and metatranscriptomic reads back to bins. Then use Subread's featureCounts to generate counts.
@@ -971,20 +1088,13 @@ tar -cvf - * | pigz --best -c -p 8 > ../../../main/data/gene_transcript_counts.t
 ```
 
 
---- 
 
-# Installing SignalP6-GPU
 
-```bash
-# Need to use virtual environment
-module load Python/3.9.9-gimkl-2020a
 
-cd bin/
-python -m venv sp6env
 
-# Install
-cd signalp6_fast
-pip install signalp-6-package
+
+```
+srun --account uoa00348 --job-name "test-sp6gpu" --gpus-per-node A100-1g.5gb:1 --cpus-per-task 8 --mem 16GB --time 2:00:00 --pty bash
 
 
 ```

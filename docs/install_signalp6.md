@@ -112,27 +112,95 @@ Convert models
 signalp6_convert_models gpu
 ```
 
+## Compare SignalP CPU vs GPU
 
-
-
-
-
-
-
-
-
-
-
-
-Directories for CPU and GPU versions were made.
+### Create test files
 
 ```bash
-mkdir signalp6_fast-{c,g}pu
+cd test/
+
+module purge
+module load SeqKit/2.2.0
+
+for n in 100 5000 25000; do
+  seqkit sample -n $n ../data/2.orf_prediction/allbins_pred.faa -o test_tmp.faa
+  seqnum=$(grep -c '>' test_tmp.faa)
+  mv test_tmp.faa test_seqsize_${seqnum}.faa
+done
 ```
 
-The directory containing all necessary install files of unpacked `signalp6_fast` were copied to `signalp6_fast-{c,g}pu`.
+### Test GPU
+
+Start a GPU interactive session.
 
 ```bash
-cp -r signalp6_fast/* signalp6_fast-cpu
-cp -r signalp6_fast/* signalp6_fast-gpu
+srun \
+  --account uoa00348 \
+  --job-name "InteractiveGPU" \
+  --gpus-per-node A100-1g.5gb:1 \
+  --cpus-per-task 12 \
+  --mem 16GB \
+  --time 1:00:00 \
+  --pty bash
 ```
+
+Activate source for SignalP6-GPU
+
+```bash
+source /nesi/project/uoa02469/Software/signalp6_fast-gpu/bin/activate
+```
+
+Test per sequence file
+
+```bash
+module load CUDA/12.0.0 Python/3.9.9-gimkl-2020a
+
+for file in test_seqsize_*.faa; do
+  seqnum=$(echo $file | sed -E 's/.*_([0-9]+).*/\1/g')
+  mkdir -p GPU_${seqnum}
+  printf "Trying %s sequences\n" "${seqnum}"
+  time signalp6 -ff $file -od GPU_${seqnum} -f none -bs 500 -wp 12
+done
+```
+
+Results for GPU
+
+| n<sub>seq</sub> | Time | Batch size |
+| :-------------- | :--- | :--------- |
+| 24841 | 12 minutes | 100 | 
+| 5000  | 2.5 minutes | 100 |
+| 87    | 8 seconds | 100 |   
+
+GPU is doing about 20-40 sequences per second.
+
+### Test CPU
+
+Activate source for SignalP6-GPU
+
+```bash
+source /nesi/project/uoa02469/Software/signalp6_fast-cpu/bin/activate
+```
+
+Test per sequence file
+
+```bash
+for file in test_seqsize_{87,5000}.faa; do
+  seqnum=$(echo $file | sed -E 's/.*_([0-9]+).*/\1/g')
+  mkdir -p CPU_${seqnum}
+  printf "Trying %s sequences\n" "${seqnum}"
+  time signalp6 -ff $file -od CPU_${seqnum} -f none -bs 100 -wp 12
+done
+```
+
+Results for CPU
+
+| n<sub>seq</sub> | Time | Batch size |
+| :-------------- | :--- | :--------- |
+| 24841 | ~ 1.5 hours | 100 |
+| 5000  | ~ 30 mins   | 100 |
+| 87    | 23 seconds  | 100 |
+
+In general, CPU is predicting at about 1-6 sequences per second. My guess is that it depends on the sequence itself.
+
+
+
