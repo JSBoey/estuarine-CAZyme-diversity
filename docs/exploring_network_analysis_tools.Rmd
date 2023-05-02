@@ -1,0 +1,71 @@
+---
+title: "Exploring network analysis tools"
+output: html_notebook
+---
+
+```{r setup, set.seed(89377)}
+knitr::opts_chunk$set(cache = T)
+
+library(tidyverse)
+```
+
+# Selection criteria
+
+Tools should be able to:
+
+- Handle sparse data
+- Account for compositionality
+
+Good to have:
+
+- Able to handle continuous and categorical covariates
+- Able to find non-linear associations
+- Multithreaded operation
+
+# Test data
+
+Data is a subset of the original transcript count table for rows with valid 
+non-zero sum. Three data sets are subsampled:
+
+- All sample transcriptome
+- Water transcriptome
+- Sediment transcriptome
+
+```{r subset_data}
+subsample_matrix <- function(m) {
+  # Row probabilities
+  row_prob <- rowMeans(m) / sum(rowMeans(m))
+  
+  # Subsample
+  mm <- m[sample.int(nrow(m), 100, replace = F, prob = row_prob), ]
+}
+
+wts_count <- read_tsv("../results/WTS_clean_count.tsv.gz", col_names = TRUE) %>% 
+  select(Geneid, contains(c("Filt", "Sed"))) %>% 
+  filter(rowSums(select(., where(is.numeric))) > 0) %>% 
+  column_to_rownames("Geneid") %>% 
+  as.matrix()
+wts_water <- wts_count[, grepl("Filt", colnames(wts_count))]
+wts_sed <- wts_count[, grepl("Sed", colnames(wts_count))]
+
+wts_subsets <- list(
+  "all" = wts_count,
+  "water" = wts_water,
+  "sediment" = wts_sed
+) %>% 
+  map(subsample_matrix)
+```
+
+# SparCC
+
+```{r speiceasi}
+library(SpiecEasi)
+library(igraph)
+
+seMB_water <- spiec.easi(wts_subsets$sediment, method='mb', lambda.min.ratio=1e-2,
+                          nlambda=20, pulsar.params=list(rep.num=50))
+igMB_water <- adj2igraph(getRefit(seMB_water))
+vsize_water <- rowMeans(clr(wts_subsets$water, 1)) + 6
+coord_water <- layout.fruchterman.reingold(igMB_water)
+plot(igMB_water, layout = coord_water, vertex.size = vsize_water, vertex.label = NA, main = "Water MB SPIEC-EASI")
+```
