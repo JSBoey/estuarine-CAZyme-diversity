@@ -7,6 +7,7 @@ output: html_notebook
 knitr::opts_chunk$set(cache = T)
 
 library(tidyverse)
+library(igraph)
 ```
 
 # Selection criteria
@@ -24,7 +25,7 @@ Good to have:
 
 # Test data
 
-Data is a subset of the original transcript count table for rows with valid 
+Data is a subset of the original CAZyme transcript count table for rows with valid 
 non-zero sum. Three data sets are subsampled:
 
 - All sample transcriptome
@@ -40,9 +41,11 @@ subsample_matrix <- function(m) {
   mm <- m[sample.int(nrow(m), 100, replace = F, prob = row_prob), ]
 }
 
+cazy_genes <- read_tsv("../results/allbins_pred.dbcan_parsed.tsv.gz", col_names = FALSE)[[1]]
+
 wts_count <- read_tsv("../results/WTS_clean_count.tsv.gz", col_names = TRUE) %>% 
   select(Geneid, contains(c("Filt", "Sed"))) %>% 
-  filter(rowSums(select(., where(is.numeric))) > 0) %>% 
+  filter(rowSums(select(., where(is.numeric))) > 0 & Geneid %in% cazy_genes) %>% 
   column_to_rownames("Geneid") %>% 
   as.matrix()
 wts_water <- wts_count[, grepl("Filt", colnames(wts_count))]
@@ -56,16 +59,213 @@ wts_subsets <- list(
   map(subsample_matrix)
 ```
 
+# Spearman correlation
+
+Only accept significant positive correlations.
+
+```{r spcorr}
+if (!require(Hmisc)) {
+  install.packages('Hmisc')
+  library(Hmisc)
+} else {
+  library(Hmisc)
+}
+
+# Generate correlations
+rcorr_out <- map(wts_subsets, ~ {
+  rcorr(t(.x), type = "spearman")
+})
+
+# Filter correlations
+signif_out <- map(rcorr_out, ~ {
+  a <- ifelse(.x$r < 0, 1, 0)
+  b <- ifelse(.x$P < 0.05, 1, 0)
+  a * b
+})
+
+# Convert correlations into igraph
+rcorrIg <- map(signif_out, ~ {
+  g <- graph_from_adjacency_matrix(
+    .x, 
+    mode = 'undirected', 
+    weighted = NULL, 
+    diag = FALSE
+  )
+  # Remove vertices without edges
+  res_g <- delete.vertices(g, degree(g) < 1)
+  
+  res_g
+})
+
+# Set vertex size to CLR of col means
+rcorrVsize <- map2(wts_subsets, rcorrIg, ~ {
+  # Subset transcripts with edges in count data
+  cmat <- .x[rownames(.x) %in% V(.y)$name]
+  # CLR normalisation
+  colMeans(SpiecEasi::clr(t(cmat), 1)) + 6
+})
+
+# Set igraph layout
+rcorrCoord <- map(rcorrIg, layout.fruchterman.reingold)
+
+# Plot graph
+for (i in 1:length(rcorrIg)) {
+  main <- paste(
+    "Spearman correlation network for", 
+    names(wts_subsets)[i]
+  )
+  
+  plot(rcorrIg[[i]], layout = rcorrCoord[[i]], 
+       vertex.size = rcorrVsize[[i]], vertex.label = NA,
+       main = main)
+}
+```
+
+# SPEIC-EASI
+
+```{r speiceasi_mb}
+library(SpiecEasi)
+
+# Set up SPIEC-EASI using Meinshausen-buhlmann's neighbourhood selection
+seMB <- map(wts_subsets, ~ {
+  spiec.easi(
+    data = t(.x), 
+    method = 'mb',
+    lambda.min.ratio = 1e-2,
+    nlambda = 20,
+    pulsar.params = list(rep.num = 50)
+  )
+})
+
+# Convert to igraph
+seMBIg <- map(seMB, ~ {
+  g <- adj2igraph(getRefit(.x))
+  g <- delete.vertices(g, degree(g) < 1)
+  
+  g
+})
+
+# Set vertex size
+seMBVsize <- map2(wts_subsets, seMBIg, ~ {
+  # Subset transcripts with edges in count data
+  cmat <- .x[rownames(.x) %in% V(.y)$name]
+  # CLR normalisation
+  colMeans(SpiecEasi::clr(t(cmat), 1)) + 6
+})
+
+# Set igraph layout
+seMBCoord <- map(seMBIg, layout.fruchterman.reingold)
+
+# Plot
+for (i in 1:length(wts_subsets)) {
+  main <- paste(
+    "SPEIC-EASI network with MB algorithm for", 
+    names(wts_subsets)[i]
+  )
+  
+  plot(seMBIg[[i]], layout = seMBCoord[[i]], 
+       vertex.size = 6, vertex.label = NA,
+       main = main)
+}
+```
+
+```{r speiceasi_gl}
+# Set up SPIEC-EASI using GLasso
+seGL <- map(wts_subsets, ~ {
+  spiec.easi(
+    data = t(.x), 
+    method = 'glasso',
+    lambda.min.ratio = 1e-2,
+    nlambda = 20,
+    pulsar.params = list(rep.num = 50)
+  )
+})
+
+# Convert to igraph
+seGLIg <- map(seGL, ~ {
+  adj2igraph(getRefit(.x)) %>% 
+    delete.vertices(., degree(.) < 1)
+})
+
+# Set vertex size
+seGLVsize <- map2(wts_subsets, seGLIg, ~ {
+  # Subset transcripts with edges in count data
+  cmat <- .x[rownames(.x) %in% V(.y)$name]
+  # CLR normalisation
+  colMeans(SpiecEasi::clr(t(cmat), 1)) + 6
+})
+
+# Set igraph layout
+seGLCoord <- map(seGLIg, layout.fruchterman.reingold)
+
+# Plot
+for (i in 1:length(wts_subsets)) {
+  main <- paste(
+    "SPEIC-EASI network with GLasso algorithm for", 
+    names(wts_subsets)[i]
+  )
+  
+  plot(seGLIg[[i]], layout = seGLCoord[[i]], 
+       vertex.size = 6, vertex.label = NA,
+       main = main)
+}
+```
+
 # SparCC
 
-```{r speiceasi}
-library(SpiecEasi)
-library(igraph)
+Non-bootstrapped SparCC.
 
-seMB_water <- spiec.easi(wts_subsets$sediment, method='mb', lambda.min.ratio=1e-2,
-                          nlambda=20, pulsar.params=list(rep.num=50))
-igMB_water <- adj2igraph(getRefit(seMB_water))
-vsize_water <- rowMeans(clr(wts_subsets$water, 1)) + 6
-coord_water <- layout.fruchterman.reingold(igMB_water)
-plot(igMB_water, layout = coord_water, vertex.size = vsize_water, vertex.label = NA, main = "Water MB SPIEC-EASI")
+```{r sparcc}
+scc <- map(wts_subsets, ~ sparcc(t(.x)))
+
+# Define SparCC threshold 
+signif_scc <- map(scc, ~ {
+  r <- ifelse(.x$Cor > 0, 1, 0)
+  r
+})
+
+# Convert to igraph
+sccIg <- map(signif_scc, ~ {
+  graph_from_adjacency_matrix(.x, mode = 'undirected', 
+                              weighted = NULL, diag = FALSE)
+})
+
+# Set vertex size
+sccVsize <- map2(wts_subsets, sccIg, ~ {
+  # Subset transcripts with edges in count data
+  cmat <- .x[rownames(.x) %in% V(.y)$name]
+  # CLR normalisation
+  colMeans(SpiecEasi::clr(t(cmat), 1)) + 6
+})
+
+# Graph layout
+sccCoord <- map(sccIg, layout.graphopt)
+
+# Plot
+for (i in 1:length(wts_subsets)) {
+  main <- paste(
+    "SparCC network for", 
+    names(wts_subsets)[i]
+  )
+  
+  plot(sccIg[[i]], layout = sccCoord[[i]], 
+       vertex.size = 6, vertex.label = NA, main = main)
+}
 ```
+
+SparCC with bootstrapped p-values
+
+```{r sparcc_bootstrap}
+# Set up bootstrapped run of SparCC for 99 bootstraps
+scb <- map(wts_subsets, ~ {
+  sparccboot(t(.x), R = 10, ncpus = 3)
+})
+
+# Calculate empirical p-value
+scbPvals <- map(scb, pval.sparccboot)
+
+# Filter correlations
+
+
+```
+
