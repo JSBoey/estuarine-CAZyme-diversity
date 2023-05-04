@@ -1,6 +1,8 @@
 ---
 title: "Exploring network analysis tools"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, set.seed(89377)}
@@ -8,6 +10,9 @@ knitr::opts_chunk$set(cache = T)
 
 library(tidyverse)
 library(igraph)
+
+# Packages to test
+library(SpiecEasi)
 ```
 
 # Selection criteria
@@ -52,7 +57,6 @@ wts_water <- wts_count[, grepl("Filt", colnames(wts_count))]
 wts_sed <- wts_count[, grepl("Sed", colnames(wts_count))]
 
 wts_subsets <- list(
-  "all" = wts_count,
   "water" = wts_water,
   "sediment" = wts_sed
 ) %>% 
@@ -124,8 +128,6 @@ for (i in 1:length(rcorrIg)) {
 # SPEIC-EASI
 
 ```{r speiceasi_mb}
-library(SpiecEasi)
-
 # Set up SPIEC-EASI using Meinshausen-buhlmann's neighbourhood selection
 seMB <- map(wts_subsets, ~ {
   spiec.easi(
@@ -145,13 +147,13 @@ seMBIg <- map(seMB, ~ {
   g
 })
 
-# Set vertex size
-seMBVsize <- map2(wts_subsets, seMBIg, ~ {
-  # Subset transcripts with edges in count data
-  cmat <- .x[rownames(.x) %in% V(.y)$name]
-  # CLR normalisation
-  colMeans(SpiecEasi::clr(t(cmat), 1)) + 6
-})
+# # Set vertex size
+# seMBVsize <- map2(wts_subsets, seMBIg, ~ {
+#   # Subset transcripts with edges in count data
+#   cmat <- .x[rownames(.x) %in% V(.y)$name]
+#   # CLR normalisation
+#   colMeans(SpiecEasi::clr(t(cmat), 1)) + 6
+# })
 
 # Set igraph layout
 seMBCoord <- map(seMBIg, layout.fruchterman.reingold)
@@ -187,13 +189,13 @@ seGLIg <- map(seGL, ~ {
     delete.vertices(., degree(.) < 1)
 })
 
-# Set vertex size
-seGLVsize <- map2(wts_subsets, seGLIg, ~ {
-  # Subset transcripts with edges in count data
-  cmat <- .x[rownames(.x) %in% V(.y)$name]
-  # CLR normalisation
-  colMeans(SpiecEasi::clr(t(cmat), 1)) + 6
-})
+# # Set vertex size
+# seGLVsize <- map2(wts_subsets, seGLIg, ~ {
+#   # Subset transcripts with edges in count data
+#   cmat <- .x[rownames(.x) %in% V(.y)$name]
+#   # CLR normalisation
+#   colMeans(SpiecEasi::clr(t(cmat), 1)) + 6
+# })
 
 # Set igraph layout
 seGLCoord <- map(seGLIg, layout.fruchterman.reingold)
@@ -216,12 +218,27 @@ for (i in 1:length(wts_subsets)) {
 Non-bootstrapped SparCC.
 
 ```{r sparcc}
-scc <- map(wts_subsets, ~ sparcc(t(.x)))
+# Get correlation matrix
+scc <- map(wts_subsets, ~ {
+  
+  # Run SparCC
+  r <- sparcc(t(.x))
+  
+  # Need to append node names back to covariance and correlation matrices
+  nm <- rownames(.x)
+  r <- map(r, function(R) {
+    colnames(R) <- nm
+    rownames(R) <- nm
+    
+    return(R)
+  })
+  
+  return(r)
+})
 
 # Define SparCC threshold 
 signif_scc <- map(scc, ~ {
-  r <- ifelse(.x$Cor > 0, 1, 0)
-  r
+  ifelse(.x$Cor > 0, 1, 0)
 })
 
 # Convert to igraph
@@ -256,16 +273,85 @@ for (i in 1:length(wts_subsets)) {
 SparCC with bootstrapped p-values
 
 ```{r sparcc_bootstrap}
-# Set up bootstrapped run of SparCC for 99 bootstraps
+# Set up bootstrapped run of SparCC 
 scb <- map(wts_subsets, ~ {
-  sparccboot(t(.x), R = 10, ncpus = 3)
+  r <- sparccboot(t(.x), R = 4, ncpus = 3)
+  
+  # Get p-values
+  p <- pval.sparccboot(r)
+  
+  # Set non-significant correlations to 0
+  sig <- ifelse(p$pvals < 0.05, 1, 0)
+  sigCor <- p$cors * sig
+  
+  # Recreate the correlation matrix
+  n <- ncol(r$data)
+  cmat <- matrix(0, nrow = n, ncol = n)
+  cmat[upper.tri(cmat, diag = F)] <- sigCor
+  cmat[lower.tri(cmat, diag = F)] <- t(cmat)[lower.tri(cmat, diag = F)]
+  diag(cmat) <- 1
+  rownames(cmat) <- rownames(.x)
+  colnames(cmat) <- rownames(.x)
+  
+  # Return the everything
+  list(
+    "SparCC_boot_results" = r,
+    "SparCC_pvalues" = p,
+    "Signif_correlations" = sigCor,
+    "Signif_corrmat" = cmat
+  )
 })
 
-# Calculate empirical p-value
-scbPvals <- map(scb, pval.sparccboot)
-
 # Filter correlations
+scbSig <- map(scb, ~ {
+  r <- .x$Signif_corrmat
+  
+  r[is.na(r) | r < 0] <- 0
+  r[r > 0] <- 1
+  
+  return(r)
+})
 
+# Convert to igraph
+scbIg <- map(scbSig, ~ {
+  graph_from_adjacency_matrix(.x, mode = 'undirected', 
+                              weighted = NULL, diag = FALSE)
+})
+
+# Set vertex size
+scbVsize <- map2(wts_subsets, scbIg, ~ {
+  # Subset transcripts with edges in count data
+  cmat <- .x[rownames(.x) %in% V(.y)$name]
+  # CLR normalisation
+  colMeans(SpiecEasi::clr(t(cmat), 1)) + 6
+})
+
+# Graph layout
+scbCoord <- map(scbIg, layout.graphopt)
+
+# Plot
+for (i in 1:length(wts_subsets)) {
+  main <- paste(
+    "SparCC (bootstrapped) network for", 
+    names(wts_subsets)[i]
+  )
+  
+  plot(scbIg[[i]], layout = scbCoord[[i]], 
+       vertex.size = 6, vertex.label = NA, main = main)
+}
 
 ```
 
+Oddly enough, the bootstrapped version of SparCC returns the upper triangle
+(sans diagonal) of the equivalent correlation matrix of the non-bootstrapped 
+version in the form of a numeric vector. How strange...
+
+# Jaccard similarity between genes: Wild idea....
+
+```{r jaccard_similarity}
+library(vegan)
+
+hmd <- map(wts_subsets, ~ {
+  
+})
+```
