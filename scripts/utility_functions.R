@@ -36,5 +36,18 @@ count2TPM <- function(count, count_summary) {
     rownames_to_column("Geneid")
 }
 
+# Count number ORFs with multiple annotation hits ----
+countMultipleHits <- function(x, query_pattern) {
+  if (!requireNamespace("tidyverse", quietly = TRUE)) library(tidyverse)
+  
+  # Column with ORF
+  qcol <- x %>% 
+    map_lgl(~ all(str_detect(.x, query_pattern))) %>% 
+    which() %>% 
+    names()
+  # Find number of duplicates
+  sum(table(x[[qcol]]) > 1)
+}
+
 
 
