@@ -4,7 +4,7 @@
 library(tidyverse)
 
 # Data ----
-filename <- list.files(path = "results/", pattern = "dbcan", full.names = T)
+filename <- list.files(path = "results/", pattern = "all.*dbcan", full.names = T)
 dataname <- str_replace(filename, ".*\\.(.*)_.*", "\\1") %>% 
   str_remove_all("-") %>% 
   str_to_lower()
@@ -41,7 +41,8 @@ data_clean <- map(data, ~ {
   modify_at("dbcansub", ~ {
     .x %>% 
       mutate(
-        label = str_replace(target, "([A-Z0-9]+_e[0-9]+)\\|.*", "\\1")
+        label = str_remove(target, "\\.hmm") %>% 
+          str_replace("([A-Z0-9]+_e[0-9]+)\\|.*", "\\1")
       )
 })
 
