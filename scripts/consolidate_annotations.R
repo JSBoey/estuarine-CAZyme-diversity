@@ -57,6 +57,11 @@ data_select <- map2(data, names(data), \(df, nm) {
   select(a, all_of(columns))
 })
 
+metadata_clean <- metadata %>% 
+  select(bin, node, type, start, end, strand, partial, start_type, rbs_motif, 
+         rbs_spacer, gc_cont, conf, score)
+
+
 # Consolidate per query ----
 data_consolidate <- map2(data_select, names(data_select), \(df, nm) {
   # Add database to column names
@@ -141,7 +146,7 @@ data_consolidate_clean <- data_consolidate %>%
 
 # Join to form main table ----
 main_table <- append(
-  list("metadata" = metadata),
+  list("metadata" = metadata_clean),
   data_consolidate_clean
 ) %>% 
   reduce(left_join, by = c("node" = "query"))
