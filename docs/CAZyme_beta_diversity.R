@@ -63,8 +63,13 @@ D <- map(norm_count, \(x) {
 
 # Compare distances ----
 dist_compare <- map(D, \(d) {
+  # Transformation and normalisation methods
   method <- names(d)
+  
+  # Combinations
   combination <- as.data.frame(t(combn(method, 2)))
+  
+  # Pairwise correlations
   combination %>% 
     mutate(
       test = map2(V1, V2, ~ cor.test(d[[.x]], d[[.y]])),
@@ -72,16 +77,117 @@ dist_compare <- map(D, \(d) {
       p.value = map_dbl(test, "p.value")
     ) %>% 
     select(-test)
+  
 })
 
-ggplot(dist_compare$wgs, aes(x = V1, y = V2, fill = rho)) +
-  geom_tile()
-
 # Ordinations ----
-
+O <- map(norm_count, \(nc) {
+  
+  map2(nc, names(nc), \(normalised_count, method) {
+    
+    # Different ordination method depending on data type
+    comp_count <- str_detect(method, "CLR")
+    comm <- t(normalised_count)
+    
+    if (isFALSE(comp_count)) {
+      
+      metaMDS(
+        comm, distance = "bray", try = 999, trymax = 999, autotransform = FALSE
+      )
+      
+    } else {
+      
+      rda(comm)
+      
+    }
+    
+  })
+  
+})
 
 # Compare ordinations ----
+procrustes_self <- map(O, \(ordination) {
+  
+  # Transformation and normalisation methods
+  method <- names(ordination)
+  
+  # Combinations
+  combination <- as.data.frame(t(combn(method, 2)))
+  
+  # Pairwise Procrustes test
+  combination %>%
+    mutate(
+      test = map2(V1, V2, ~ protest(ordination[[.x]], ordination[[.y]])),
+      ss = map_dbl(test, "ss"),
+      t0 = map_dbl(test, "t0"),
+      signif = map_dbl(test, "signif"),
+      across(c(ss, t0, signif), \(x) round(x, 3))
+    )
+  
+}) %>% 
+  bind_rows(.id = "data_type")
 
+pdf(
+  "results/Normalisation_transformation_comparisons_ordinations.pdf", 
+  width = 8.3, height = 11.7
+)
+par(mfrow = c(3, 2), pty = "s")
+for (i in 1:nrow(procrustes_self)) {
+  plot_data <- procrustes_self$test[[i]]
+  main <- paste(
+    procrustes_self$data_type[[i]], procrustes_self$V1[[i]], procrustes_self$V2[[i]]
+  )
+  sub <- paste0(
+    "SS: ", procrustes_self$ss[[i]], 
+    " Correlation: ", procrustes_self$t0[[i]], 
+    " P-value: ", procrustes_self$signif[[i]]
+  )
+  plot(plot_data, kind = 1, main = main, sub = sub)
+  plot(plot_data, kind = 2)
+}
+dev.off()
+
+# Compare interpretability of methods ----
+interpretability <- map(norm_count, \(nc) {
+  
+  map2(nc, names(nc), \(normalised_count, method) {
+    
+    # Different tests depending on data type
+    comp_count <- str_detect(method, "CLR")
+    comm <- t(normalised_count)
+    metadata <- filter(env_data, sample %in% rownames(comm))
+    
+    if (isFALSE(comp_count)) {
+      
+      dbrda(comm ~ type + salinity, metadata, sqrt.dist = F, distance = "bray")
+      
+    } else {
+      
+      rda(comm ~ type + salinity, metadata)
+      
+    }
+    
+  })
+  
+})
+
+interpretability_test <- map_depth(interpretability, 2, \(x) {
+  anova.cca(x, by = "margin", parallel = 4)
+})
+
+anova_df <- map_depth(interpretability_test, 2, \(x) {
+  broom::tidy(x) %>% 
+    rename_with(
+      ~ str_replace(.x, "Variance|SumOfSqs", "Variation")
+    )
+}) %>% 
+  map(bind_rows, .id = "transform") %>% 
+  bind_rows(.id = "data_type") %>% 
+  mutate(
+    "Variation_type" = if_else(str_detect(transform, "CLR"), "Variance", "Sum of squares")
+  )
+
+write_tsv(anova_df, "results/Normalisation_transformation_PerMANOVA.tsv")
 
 # Plot ----
 
