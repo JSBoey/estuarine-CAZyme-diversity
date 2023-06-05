@@ -1,4 +1,4 @@
-# CAZyme beta diversity
+# Exploratory data analysis: CAZyme beta diversity
 
 # Environment ----
 library(vegan)
@@ -188,7 +188,3 @@ anova_df <- map_depth(interpretability_test, 2, \(x) {
   )
 
 write_tsv(anova_df, "results/Normalisation_transformation_PerMANOVA.tsv")
-
-# Plot ----
-
-
