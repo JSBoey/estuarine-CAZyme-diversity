@@ -91,7 +91,13 @@ CO <- map(norm_count, \(l) {
 CO_summary <- map_depth(CO, 2, summary)
 
 ## Test of significance: Constrained ordination ----
-TCO <- map_depth(CO, 2, \(x) anova.cca(x, by = "margin"))
+TCO <- map_depth(CO, 2, \(x) {
+  model <- c("margin", "terms", "axis")
+  names(model) <- model
+  map(model, \(m) {
+    anova.cca(x, by = m, permutations = 99)
+  })
+})
 
 ## Beta-dispersion (variance) by sample type ----
 BD <- map(norm_count, \(l) {
@@ -115,13 +121,143 @@ BD <- map(norm_count, \(l) {
 TBD <- map_depth(BD, 2, permutest)
 
 # Plot Analysis 1 ----
-## Constrained ordinations ----
-### Extract scores
+## Unconstrained ordinations ----
+### Extract scores and join tables ----
+O_score <- map_depth(O, 2, \(ord) {
+  scores(ord, scaling = "sites", tidy = TRUE) %>% 
+    left_join(env_data, by = c("label" = "sample"))
+})
 
-### Join tables
+### Ordination plot ----
+O_plot <- map_depth(O_score, 2, \(S) {
+  # Filter score type to sites
+  S <- filter(S, score == "sites")
+  # Get axis names before standardisation
+  axis_name <- names(S)[1:2]
+  # Rename axes
+  names(S)[c(1, 2)] <- c("x", "y")
+  ggplot(
+    data = S, 
+    mapping = aes(x = x, y = y)
+  ) +
+    geom_hline(
+      yintercept = 0, colour = "grey40", linetype = 2
+    ) +
+    geom_vline(
+      xintercept = 0, colour = "grey40", linetype = 2
+    ) +
+    geom_point(
+      mapping = aes(colour = salinity, shape = type)
+    ) +
+    labs(
+      x = axis_name[[1]], 
+      y = axis_name[[2]], 
+      colour = "Salinity ‰", 
+      shape = "Sample type"
+    ) +
+    scale_colour_viridis_c(
+      limits = c(0, 35)
+    ) +
+    scale_shape_manual(
+      values = c("sediment" = 15, "water" = 16),
+      labels = str_to_title
+    ) +
+    theme_bw() +
+    theme(
+      aspect.ratio = 1,
+      panel.grid = element_blank()
+    )
+})
+
+## Constrained ordinations ----
+### Extract scores and join tables 
+CO_score <- map_depth(CO, 2, \(ord) {
+  scores(ord, scaling = "sites", tidy = TRUE) %>% 
+    left_join(env_data, by = c("label" = "sample"))
+}) %>% 
+  list_flatten()
+
+CO_statistic <- list_flatten(TCO)
+
+CO_arrowMultiplier <- map_depth(CO, 2, ~ {
+  a <- ordiArrowMul(.x, display = "bp")
+  
+  if (is.infinite(a)) {
+    a <- 1
+  } else if (a < 2) {
+    a <- 3
+  }
+  
+  return(a)
+}) %>% 
+  list_flatten()
 
 ### Ordination plot
+CO_plot <- pmap(
+  list(CO_score, CO_statistic, CO_arrowMultiplier), \(scr, st, mul) {
+    # Get axis names prior to standardisation
+    axis_name <- names(scr)[1:2]
+    # Standardise axis names for ggplot call
+    names(scr)[1:2] <- c("x", "y")
+    # Main plotting variables
+    site_score <- filter(scr, score == "sites")
+    centroid <- filter(scr, score == "centroids") %>% 
+      mutate(
+        label = str_to_title(str_remove(label, "type"))
+      )
+    biplot <- filter(scr, score == "biplot") %>% 
+      mutate(
+        across(c(x, y), \(axis) axis * mul)
+      )
+    
+    # Axis variables
+    axis_variation <- proportions(as.matrix(st[["axis"]][, 2]))[1:2]
+    axis_label <- paste0(
+      axis_name, " (", round(axis_variation * 100, 2), "%)"
+    )
+    
+    ggplot() +
+      geom_hline(
+        yintercept = 0, colour = "grey40", linetype = 2
+      ) +
+      geom_vline(
+        xintercept = 0, colour = "grey40", linetype = 2
+      ) +
+      geom_segment(
+        mapping = aes(xend = x, yend = y, x = 0, y = 0),
+        data = biplot, 
+        arrow = arrow(length = unit(0.03, units = "npc"))
+      ) +
+      geom_point(
+        mapping = aes(x = x, y = y, colour = salinity, shape = type),
+        data = site_score
+      ) +
+      geom_text(
+        mapping = aes(x = x, y = y, label = label),
+        data = centroid
+      ) +
+      labs(
+        x = axis_label[[1]], 
+        y = axis_label[[2]], 
+        colour = "Salinity ‰", 
+        shape = "Sample type"
+      ) +
+      scale_colour_viridis_c(
+        limits = c(0, 35)
+      ) +
+      scale_shape_manual(
+        values = c("sediment" = 15, "water" = 16),
+        labels = str_to_title
+      ) +
+      theme_bw() +
+      theme(
+        aspect.ratio = 1,
+        panel.grid = element_blank()
+      )
+  }
+)
 
+patchwork::wrap_plots(CO_plot)
 ## Beta-dispersion ----
 ### Extract distance-to-centroids
 
@@ -175,7 +311,7 @@ TPr <- map(OPr, \(ord) {
 ## Plot Analysis 2 ----
 ### Extract points
 
-### Extract rotaion plane
+### Extract plane of rotation
 
 ### Assemble tables
 

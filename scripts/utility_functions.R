@@ -36,9 +36,9 @@ makeCountMatrix <- function(count_data) {
 # - Based on column sums of count data (csum)
 # - Based on all mapped reads (mapped): Obtain from mapping summary
 normaliseCounts <- function(count_data, mapping_summary, method, use.lib.size) {
-  if (!requireNamespace("tidyverse", quietly = TRUE)) library(tidyverse)
-  if (!requireNamespace("edgeR", quietly = TRUE)) library(edgeR)
-  if (!requireNamespace("vegan", quietly = TRUE)) library(vegan)
+  if (!requireNamespace("tidyverse", quietly = TRUE)) {library(tidyverse)}
+  if (!requireNamespace("edgeR", quietly = TRUE)) {library(edgeR)}
+  if (!requireNamespace("vegan", quietly = TRUE)) {library(vegan)}
   
   # Turn mapping summary into a matrix
   mapping_summary <- column_to_rownames(mapping_summary, "Status") %>% 
