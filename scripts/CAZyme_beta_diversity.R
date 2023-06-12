@@ -15,6 +15,7 @@
 
 # Environment ----
 library(vegan)
+library(edgeR)
 library(tidyverse)
 source("scripts/utility_functions.R")
 

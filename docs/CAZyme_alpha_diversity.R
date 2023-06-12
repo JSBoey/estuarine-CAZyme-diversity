@@ -6,6 +6,7 @@ library(edgeR)
 library(tidyverse)
 
 source("scripts/utility_functions.R")
+source("scripts/transcriptomes_information_theory.R")
 
 # Utilities ----
 # Filter function for callback to subset data to CAZyme genes only
@@ -200,3 +201,53 @@ ggplot(cazy_shannon, aes(x = salinity, y = D_j, colour = H_j)) +
 cazy_specifcity <- map(aggregate_tpm_sample_type, ~ {
   geneSpecificity(.x, log.base = 2) / log(ncol(.x), base = 2)
 })
+
+# CAZyme family specificity ----
+family_count <- list(
+  "wgs" = wgs_sum,
+  "wts" = wts_sum
+) %>% 
+  map(\(x) as.matrix(column_to_rownames(x, "cazy_family")))
+
+family_spec <- map(family_count, \(x) geneSpecificity(x) / log2(ncol(x))) %>% 
+  map(~ .x[order(.x)])
+family_pa <- map(family_count, \(x) rowSums(decostand(x, "pa")))
+family_spec_pa <- map2(family_pa, family_spec, ~ {
+  x <- data.frame(
+    cf = names(.x),
+    N = .x
+  )
+  y <- data.frame(
+    cf = names(.y),
+    S_i = .y
+  )
+  
+  left_join(x, y) %>% 
+    mutate(
+      cc = str_extract(cf, "[A-Za-z]+")
+    ) %>% 
+    filter(N > 0)
+})
+
+ggplot(family_spec_pa$wts, aes(x=N, y=S_i)) +
+  geom_point() +
+  facet_wrap(~ cc)
+
+family_Hj <- map(family_count, ~ diversity(.x, base = 2, MARGIN = 2) / log2(nrow(.x)))
+family_dj <- map(family_count, ~ sampleSpecificity(.x) / log2(ncol(.x)))
+
+family_Hj_dj <- map2(family_Hj, family_dj, ~ {
+  x <- data.frame(
+    Hj = .x,
+    dj = .y
+  ) %>% 
+    rownames_to_column("sample") %>% 
+    left_join(env_data)
+})
+
+ggplot(family_Hj_dj$wts, aes(x=Hj, y=dj, colour=salinity)) +
+  geom_point() +
+  facet_wrap(~ type) +
+  scale_x_continuous(limits = c(0, 1)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_colour_viridis_c()
