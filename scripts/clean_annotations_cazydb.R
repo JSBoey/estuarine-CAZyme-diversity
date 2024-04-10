@@ -51,6 +51,8 @@ data <- read_tsv_chunked(
   chunk_size = 50000, comment = "#"
 )
 
+gc()
+
 # Clean up ----
 label_pattern <- "(GH|GT|PL|CE|AA|CBM)\\d+(_\\d+)?"
 ec_pattern <- "([0-9n-]+\\.){3}[0-9n-]+"
@@ -64,14 +66,22 @@ data_clean <- data %>%
     across(c(label, ec), ~ map_chr(.x, paste, collapse = " "))
   )
 
+gc()
+
 # Best hits ----
+## For best hit, need to keep accession
 best_bitscore <- data_clean %>% 
   group_by(query) %>% 
   filter(
     bitscore == max(bitscore)
   ) %>% 
-  ungroup()
+  ungroup() %>% 
+  mutate(
+    accession_best_hit = str_replace(target, "([^\\|])\\|.*", "\\1")
+  ) %>% 
+  select(-ec)
 
+## For best hit with EC annotation, need to keep accession and EC
 best_ec <- data_clean %>% 
   filter(
     ec != ""
@@ -80,7 +90,10 @@ best_ec <- data_clean %>%
   filter(
     bitscore == max(bitscore)
   ) %>% 
-  ungroup()
+  ungroup() %>% 
+  mutate(
+    accession_best_hit_ec = str_replace(target, "([^\\|])\\|.*", "\\1")
+  )
 
 best_hits <- bind_rows(best_bitscore, best_ec) %>% 
   distinct() %>% 

@@ -3,8 +3,7 @@ results/
 bin/
 data/
 test/
+.*
+_*
 *.RData
-*.Rproj*
-.Rproj.user
-*.Rhistory
-.Rhistory
+analysis_workflow*

@@ -39,7 +39,7 @@ data_select <- map2(data, names(data), \(df, nm) {
   } else if (nm == "kofam") {
     columns <- c("target", "definition", "ec")
   } else if (nm == "cazydb") {
-    columns <- c("label", "ec")
+    columns <- c("label", "accession_best_hit", "accession_best_hit_ec", "ec")
   } else if (nm == "tcdb") {
     columns <- c("label", "family")
   } else if (nm == "signalp") {
@@ -102,7 +102,7 @@ data_consolidate <- map2(data_select, names(data_select), \(df, nm) {
       ) %>% 
       mutate(
         across(
-          -query, \(x) map_chr(x, ~ paste(.x[!is.na(.x)], collapse = ";"))
+          -query, \(x) map_chr(x, ~ paste(.x[!(is.na(.x) | .x == "")], collapse = ";"))
         )
       ) %>% 
       group_by(query) %>% 
@@ -113,7 +113,7 @@ data_consolidate <- map2(data_select, names(data_select), \(df, nm) {
       ) %>% 
       mutate(
         across(
-          -query, \(x) map_chr(x, ~ paste(.x[!is.na(.x)], collapse = ";"))
+          -query, \(x) map_chr(x, ~ paste(.x[!(is.na(.x) | .x == "")], collapse = ";"))
         )
       )
   }
@@ -150,6 +150,14 @@ main_table <- append(
   data_consolidate_clean
 ) %>% 
   reduce(left_join, by = c("node" = "query"))
+
+# Replace empty strings with NA_character
+main_table <- main_table %>% 
+  mutate(
+    across(
+      where(is.character), \(x) if_else(x == "", NA_character_, x)
+    )
+  )
 
 # Write out ----
 write_tsv(main_table, "results/allbins_pred.annotation_table.tsv.gz")

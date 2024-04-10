@@ -15,22 +15,18 @@
 
 # Environment ----
 library(vegan)
-library(edgeR)
 library(tidyverse)
-source("scripts/utility_functions.R")
+source("scripts/in_progress/utility_functions.R")
 
-# Data ----
+# Import data ----
 env_data <- read_tsv("data/sample_metadata.txt")
-
-dbcan <- read_tsv("results/clean.dbcan.tsv.gz")
-
-callback <- DataFrameCallback$new(cazyFilter)
+gene_annotation <- read_tsv("results/allbins_pred.annotation_table.tsv.gz")
 
 count_data <- list(
   "wgs" = "results/WGS_clean_count.tsv.gz",
   "wts" = "results/WTS_clean_count.tsv.gz"
 ) %>% 
-  map(read_tsv_chunked, callback = callback)
+  map(read_tsv)
 
 count_summary <- list(
   "wgs" = "results/WGS_count.tsv.summary",
@@ -40,8 +36,10 @@ count_summary <- list(
   map(rename_with, fcNameClean)
 
 # Normalise count ----
-norm_method <- c("tpm", "rclr") %>% 
-  set_names(str_to_upper(.))
+norm_method <- list(
+  "TPM" = norm_TPM,
+  "rCLR" = norm_rCLR
+)
 
 norm_count <- map2(count_data, count_summary, \(df, df_sum) {
   map(norm_method, \(method) {

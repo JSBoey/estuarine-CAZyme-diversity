@@ -1,0 +1,479 @@
+dbcan_label	cazyme_consensus_ec	cazyme_substrate_higher	cazyme_substrate_simple
+GH13_18	2.4.1.7	sucrose	Sucrose
+GH102	4.2.2.n1	peptidoglycan	peptidoglycan
+GH3	3.2.1.52	chitin	chitin, peptidoglycan
+GH23	4.2.2.n1	peptidoglycan	peptidoglycan
+GH57	2.4.1.25	starch	starch, glycogen, and malto-oligosaccharides
+GH5_25	3.2.1.4	beta-glucan	cellulose, beta-glucan
+GH171	3.2.1.92	peptidoglycan	peptidoglycan
+GH13_11	3.2.1.68;2.4.1.25	glycogen; starch	glycogen; starch, glycogen, and malto-oligosaccharides
+GH13_23	3.2.1.20	starch	starch
+GH2	3.2.1.23	beta-galactan	beta-galactoside
+CBM48;GH13_9	2.4.1.18	alpha-glucan	starch, glycogen, and malto-oligosaccharides
+GH163	3.2.1.-	host glycan	N-glycan (host glycan)
+GH103	4.2.2.n1	peptidoglycan	peptidoglycan
+GH108	3.2.1.17	peptidoglycan	peptidoglycan
+GH43_11;CBM91	3.2.1.37;3.2.1.55	xylan	xylan; arabinoxylan
+GH20	3.2.1.52	host glycan	N-glycan (host glycan, human milk oligosaccharides, chitin)
+GH92	3.2.1.-	host glycan	host N-glycan Man9(GlcNac)2; host N-glycan
+GH105	3.2.1.-	ulvan; pectin	ulvan; pectin
+GH105	3.2.1.172	pectin	pectin (rhamnogalacturonan I)
+PL1	4.2.2.2	pectin	pectin
+GH28	3.2.1.15	pectin	galacturonan (pectin)
+GH13	3.2.1.1	starch	starch, glycogen, and malto-oligosaccharides
+GH65	2.4.1.8	alpha-glucan	maltose (α1,4)
+GH29	3.2.1.111;3.2.1.51	host glycan	human milk oligosaccharides, mucin, host glycan
+GH130	2.4.1.339;2.4.1.340	beta-mannan	beta-mannan
+GH127	3.2.1.185	arabinogalactan protein	arabinogalactan proteins
+GH31	3.2.1.20	starch	starch
+GH97	3.2.1.22	alpha-glucan	alpha-galactoside, alpha-fucoside
+GH95	3.2.1.-;3.2.1.63	pectin, xylan; xyloglucan, host glycan	plant pectic polysaccharide, xylan; alpha1,2-L-fucosidase sugar
+GH157	3.2.1.39	beta-glucan	beta-glucans (bacteria curdlan)
+GH53	3.2.1.89	arabinogalactan protein	arabinogalactan
+GH13	3.2.1.54	starch	cyclomaltodextrins
+CBM67;GH78	3.2.1.40	alpha-rhamnoside	α-L-rhamnosidase in polyphenol (naringin, rutin, hesperidin), ulvan, pectin, arabinogalactan-protein
+GH78	3.2.1.40	alpha-rhamnoside	α-L-rhamnosidase in polyphenol (naringin, rutin, hesperidin), ulvan, pectin, arabinogalactan-protein
+GH13_14	3.2.1.41	starch	pullulan (starch degradation by fungi)
+GH5_46	3.2.1.4	beta-glucan	cellulose, beta-glucan
+GH3	3.2.1.21	beta-glucan	beta-glucan
+PL26	4.2.2.24	pectin	rhamnogalacturonan I(pectin from the plant cell wall)
+GH73	3.2.1.-	peptidoglycan	peptidoglycan
+GH140	3.2.1.-	pectin	pectin (rhamnogalacturonan II)
+GH26	3.2.1.32	xylan	beta(1,3)-xylan (algae)
+PL9_1	4.2.2.23	pectin	rhamnogalacturonan I(pectin from the plant cell wall)
+GH20	3.2.1.-	exo-polysaccharide; host glycan	capsular polysaccharide (bacteria); mucin
+GH88	3.2.1.-	host glycan	sulfated glycosaminoglycans
+GH109	3.2.1.49	host glycan	mucin-type O-glycans
+GH109	3.2.1.49;3.2.1.52	host glycan	mucin-type O-glycans
+GH130	2.4.1.281	beta-mannan	beta-mannan
+GH36	3.2.1.22	alpha-galactan	alpha-galactoside (galactose oligosaccharides, galactomannans and galactolipid)
+GH3	3.2.1.21;3.2.1.-	beta-glucan	beta-1,3-1,4-glucan (laminarin, lichenin and cereal D-glucans); beta-1,2-glucan (bacteria); beta-1,3-glucan (laminarin, lichenin and cereal D-glucans); beta-glucan
+GH144	3.2.1.71;3.2.1.214	beta-glucan	beta-1,2-glucan (bacteria)
+GH3	3.2.1.21;3.2.1.37;3.2.1.-;3.2.1.74	beta-glucan; xylan	beta-1,3-1,4-glucan (laminarin, lichenin and cereal D-glucans); beta-1,2-glucan (bacteria); beta-1,3-glucan (laminarin, lichenin and cereal D-glucans); beta-glucan; xylan; cellodextrin (beta-1,3-glucan)
+GH28	3.2.1.173	pectin	pectin (rhamnogalacturonan I)
+GH29	3.2.1.51	host glycan	human milk oligosaccharides, mucin, host glycan
+GH26	3.2.1.100	beta-mannan	beta-mannan (plant)
+GH29	3.2.1.63;3.2.1.51	host glycan	human milk oligosaccharides, mucin, host glycan
+GH67	3.2.1.139;3.2.1.131	xylan	xylan side chain
+GH51	3.2.1.55	arabinan	arabinan, arabinoxylan
+GH146	3.2.1.185	arabinan	arabinan
+GH106	3.2.1.40	pectin	pectin (rhamnogalacturonan II)
+GH77	2.4.1.25	starch	amylomaltase
+GH43_1	3.2.1.37;3.2.1.55	xylan	xylan; arabinoxylan
+GH33	3.2.1.18	sialic acid	sialic acid (O-glycan, N-glycan, mucin, host glycan)
+GH106	3.2.1.174	pectin	pectin (rhamnogalacturonan I)
+GH27;CBM51	3.2.1.88	arabinogalactan protein	arabinogalactan
+GH149	2.4.1.97	beta-glucan	beta-1,3-glucan
+GH17	3.2.1.39	beta-glucan	beta-1,3-glucan (algae, plant)
+GH88	3.2.1.180	host glycan	sulfated glycosaminoglycans
+GH32;CBM38	3.2.1.65;3.2.1.26;3.2.1.153;3.2.1.64;2.4.1.99	fructan	fructan(inulin, levan and sucrose); fructan; levan (fructan)
+GH137	3.2.1.185	pectin	pectin (rhamnogalacturonan II)
+GH1	3.2.1.21	beta-glucan	beta-glucoside
+GH5_26	3.2.1.4;3.2.1.73	beta-glucan	cellulose, beta-glucan; beta-glucan(contains both (1->3)- and (1->4)-bonds),lichenin and cereal beta-glucan
+GH30_1	3.2.1.45	host glycan	glucosylsphingosine, glucosylceramide (host glycans)
+GH18	3.2.1.14	chitin	chitin
+GH133	3.2.1.33	glycogen	glycogen
+GH114	3.2.1.109	alpha-mannan	galactosaminogalactan (fungal exopolysaccharide)
+GH16_3	3.2.1.39;3.2.1.6;3.2.1.73	beta-glucan	beta-1,3-glucan (fungi, algae, plant); beta-1,3-1,4-glucan (laminarin, lichenin and cereal D-glucans)
+GH144	3.2.1.214	beta-glucan	beta-1,2-glucan (bacteria)
+GH25	3.2.1.17	peptidoglycan	peptidoglycan
+GH13_9	2.4.1.18	alpha-glucan	starch, glycogen, and malto-oligosaccharides
+GH26	3.2.1.78	beta-mannan	beta-mannan (plant)
+GH32	3.2.1.65;3.2.1.26;3.2.1.153;3.2.1.64;2.4.1.99	fructan	fructan(inulin, levan and sucrose); fructan; levan (fructan)
+GH57	3.2.1.1	starch	starch, glycogen and related polysaccharides and oligosaccharides(containing three or more (1->4)-alpha-linked D-glucose units)
+GH2	3.2.1.146	alpha-mannan	galactomannan (fungi)
+GH148;CBM4	3.2.1.-;3.2.1.4	beta-mannan; beta-glucan	glucomannan; beta-glucan and lichenin
+GH18	3.2.1.14;3.2.1.-;3.2.1.132	peptidoglycan; chitin	peptidoglycan; chitooligosaccharides (symbiotic nitrogen-fixing bacteria); chitin
+GH20	3.2.1.52;3.2.1.-	exo-polysaccharide; host glycan	capsular polysaccharide (bacteria); mucin; N-glycan (host glycan, human milk oligosaccharides, chitin)
+GH37	3.2.1.28	trehalose	alpha-trehalose
+GH13_3	2.4.99.16	starch	starch, glycogen, and malto-oligosaccharides
+GH13_14	3.2.1.41;3.2.1.1;3.2.1.68	starch	starch, glycogen, and malto-oligosaccharides; pullulan (starch degradation by fungi)
+GH30_3	3.2.1.75	beta-glucan	beta-1,6-glucan (fungal and algal cell wall)
+GH18	3.2.1.14;3.2.1.-	peptidoglycan; chitin	peptidoglycan; chitooligosaccharides (symbiotic nitrogen-fixing bacteria); chitin
+GH13	3.2.1.135	starch	pullulan (starch degradation by fungi)
+GH2	3.2.1.25	beta-mannan	beta-mannoside
+GH151	3.2.1.51	human milk polysaccharide	fucosylated human milk oligosaccharides
+GH73	3.2.1.96;3.2.1.-	peptidoglycan	peptidoglycan
+PL17_2;PL17	4.2.2.26;4.2.2.3	alginate	alginate
+PL6;PL6_1	4.2.2.-;4.2.2.11;4.2.2.26	alginate	alginate
+PL29	4.2.2.20	host glycan	glycosaminoglycans(host glycan)
+GH24	3.2.1.17	peptidoglycan	peptidoglycan
+GH31	3.2.1.199	polyphenol	sulfoquinovoside (plant sulfolipid)
+GH3	3.2.1.21;3.2.1.74;3.2.1.-;3.2.1.6	beta-glucan	beta-1,3-1,4-glucan (laminarin, lichenin and cereal D-glucans); beta-1,2-glucan (bacteria); beta-1,3-glucan (laminarin, lichenin and cereal D-glucans); beta-glucan; cellodextrin (beta-1,3-glucan)
+GH68	2.4.1.9	fructan	synthesize β (2-1)-linked fructan
+GH32	3.2.1.26	fructan	fructan(inulin, levan and sucrose)
+GH42	3.2.1.23	arabinogalactan protein	beta-1,6/1,3-galactoside (arabinogalactan)
+GH18;CE4;GT2	2.4.1.-;3.5.1.104	peptidoglycan	peptidoglycan
+PL1_2	4.2.2.2	pectin	pectin
+GH43_9	3.2.1.55	xylan	arabinoxylan
+GH43_28;CBM32	3.2.1.-	arabinan; xylan	arabinan, arabinoxylan; arabinan; beta-1,3-xylan (algae)
+GH97	3.2.1.3;3.2.1.20	alpha-glucan	alpha-glucose residue; beta-glucose
+GH16_3	3.2.1.73;3.2.1.39	beta-glucan	beta-1,3-glucan (fungi, algae, plant); beta-1,3-1,4-glucan (laminarin, lichenin and cereal D-glucans)
+GH154	3.2.1.-	arabinogalactan protein	arabinogalactan proteins
+GH10	3.2.1.8	xylan	xylan
+CE12;GH28	3.2.1.67	pectin	galacturonan (pectin)
+CBM48;GH13_11	3.2.1.68;2.4.1.25	glycogen; starch	glycogen; starch, glycogen, and malto-oligosaccharides
+GH16_3	3.2.1.39;3.2.1.6	beta-glucan	beta-1,3-glucan (fungi, algae, plant); beta-1,3-1,4-glucan (laminarin, lichenin and cereal D-glucans)
+GH158	3.2.1.39	beta-glucan	beta-glucans (yeast, seaweed, and plant)
+GH43_29	3.2.1.55	xylan	arabinoxylan
+GH8	3.2.1.132;3.2.1.4	chitosan; cellulose	chitosan; cellulose
+GH4	3.2.1.86	beta-glucan	beta-glucoside (sinigrin, cellubiose)
+GH13_36	3.2.1.1;3.2.1.54	starch	starch, glycogen, and malto-oligosaccharides; cyclomaltodextrins
+GH1	3.2.1.21;3.2.1.-;3.2.1.38;3.2.1.23;3.2.1.74	beta-glucan; polyphenol; beta-galactan; beta-fucosides	beta-glucan; rutin (polyphenol); beta-glucoside; beta-galactoside; beta-fucosides
+GH1	3.2.1.21;3.2.1.38;3.2.1.-	beta-glucan; polyphenol; beta-fucosides	beta-glucan; rutin (polyphenol); beta-glucoside; beta-fucosides
+GH13_23	3.2.1.20;3.2.1.10	starch	amylopectin (starch); starch
+GH4	3.2.1.22	raffinose	alpha-galactoside (raffinose family of oligosaccharides)
+CBM85;GH10	3.2.1.8	xylan	xylan
+GH13_20	3.2.1.41;3.2.1.135	starch	pullulan (starch degradation by fungi)
+GH3	2.4.1.-;3.2.1.21;3.2.1.52	peptidoglycan; beta-glucan; chitin	peptidoglycan; beta-glucan; chitin, peptidoglycan
+GH16_5	3.2.1.6	beta-glucan	beta-1,3-1,4-glucan (laminarin, lichenin and cereal D-glucans)
+GH166	3.2.1.-	alpha-galactan	exopolysaccharide galactosaminogalactan (fungal GAG)
+GH43_18	3.2.1.55	xylan	arabinoxylan
+GH43_5	3.2.1.99	arabinan	arabinan
+GH15	3.2.1.3	starch	starch
+GH13_21	3.2.1.20;3.2.1.1	starch	starch, glycogen, and malto-oligosaccharides; starch
+GH117;GH117	3.2.1.159	agarose	neoagarose (marine algae)
+GH5_25	3.2.1.4;3.2.1.78	beta-glucan; beta-mannan	cellulose, beta-glucan; mannans, galactomannans and glucomannan
+GH13_4	2.4.1.4	sucrose	Sucrose
+GH16_24	3.2.1.-	host glycan; exo-polysaccharide; carrageenan	mucin-type O-glycans; exopolysaccharides (bacteria); carrageenan
+GT84;GH94	2.4.1.-;2.4.1.333	chitin; beta-glucan	4-O-β-glucosyl-galactose; 1,2-β-oligoglucan
+GH116	3.2.1.45	host glycan	lipid glucosylceramide (host cell surface)
+GH44	3.2.1.4	beta-glucan	cellulose, lichenin and cereal beta-glucan
+GH5_12	3.2.1.45	glycolipid	fungus-specific glucosylceramide (glycolipid)
+CBM41;CBM41;GH13_13	3.2.1.41;3.2.1.68	starch	pullulan (starch degradation by fungi); starch, glycogen, and malto-oligosaccharides
+PL22;PL22_2	4.2.2.6	pectin	pectin( D-galacturonate)
+GH166;CBM9	3.2.1.-	alpha-galactan	exopolysaccharide galactosaminogalactan (fungal GAG)
+GH3	3.2.1.21;3.2.1.-;3.2.1.37;3.2.1.55;3.2.1.23;3.2.1.45	beta-glucan; xylan; host glycan; arabinan	beta-1,3-1,4-glucan (laminarin, lichenin and cereal D-glucans); beta-1,2-glucan (bacteria); beta-1,3-glucan (laminarin, lichenin and cereal D-glucans); beta-glucan; xylan; glycosphingolipid (host glycan); arabinan, arabinoxylan
+GH95	3.2.1.51	host glycan	alpha-L-fucoside
+PL42	4.2.2.-	arabinogalactan protein	arabinogalactan
+GH93	3.2.1.-	arabinan	arabinan (pectin)
+GH19	3.2.1.14 3.2.1.201	chitin	chitin
+GH13_36	3.2.1.1	starch	starch, glycogen, and malto-oligosaccharides
+GH28	3.2.1.67	pectin	galacturonan (pectin)
+GH127	3.2.1.-	pectin; carrageenan	pectin (rhamnogalacturonan II); carrageenan (marine algae)
+GH13_8	2.4.1.18	alpha-glucan	starch, glycogen, and malto-oligosaccharides
+PL8_3	4.2.2.5	host glycan	glycosaminoglycans(host glycan)
+GH29	3.2.1.111	host glycan	human milk oligosaccharides, mucin, host glycan
+PL35	4.2.2.-	glycoprotein	chondroitin
+GH16_16	3.2.1.81;3.2.1.178	porphyran; agarose	porphyran (red algal beta-galactose-sulfate); agarose
+GH29;CBM32	3.2.1.111;3.2.1.51	host glycan	human milk oligosaccharides, mucin, host glycan
+PL11_1	4.2.2.23;4.2.2.24	pectin	rhamnogalacturonan I(pectin from the plant cell wall)
+GH43_34	3.2.1.146	beta-galactan	beta-galactofuranoside
+GH13_31	5.4.99.11;3.2.1.20;3.2.1.10;3.2.1.-;3.2.1.70	starch; sucrose	starch; amylopectin (starch); starch, glycogen, and α-1,6 glucan; sucrose
+GH43_24	3.2.1.145	arabinogalactan protein	beta-1,3-galactan, arabinogalactan
+GH5_36	3.2.1.78	beta-mannan	mannans, galactomannans and glucomannan
+GH13_38	3.2.1.20	starch	starch
+GH3	3.2.1.21;3.2.1.38;3.2.1.-	beta-glucan	beta-1,3-1,4-glucan (laminarin, lichenin and cereal D-glucans); beta-1,2-glucan (bacteria); beta-1,3-glucan (laminarin, lichenin and cereal D-glucans); beta-glucan
+GH63	3.2.1.106	host glycan	N-glycan
+GH2	3.2.1.-;3.2.1.23	pectin; beta-galactan	pectin (rhamnogalacturonan II); beta-galactoside
+GH13_20	3.2.1.-;3.2.1.54	starch	starch; cyclomaltodextrins
+GH31	2.4.1.161	starch	glycogen and starch
+GH13_2	3.2.1.1	starch	starch, glycogen, and malto-oligosaccharides
+GH130	3.2.1.197	beta-mannan	beta-1,2-(bi, tri)ose
+GH94	2.4.1.20;2.4.1.49	cellulose	cellobiose; cellodextrin
+GH15	3.2.1.28	trehalose	trehalose
+GH5_13	3.2.1.146	arabinogalactan protein	arabinogalactan (bacteria)
+GH97	3.2.1.3	alpha-glucan	beta-glucose
+GH115	3.2.1.131	xylan	glucuronoxylan
+GH3	3.2.1.37;3.2.1.55;3.2.1.21;3.2.1.6;3.2.1.73	beta-glucan; xylan; arabinan	beta-glucan; xylan; arabinan, arabinoxylan; beta-1,3-glucan (laminarin, lichenin and cereal D-glucans)
+GH10	3.2.1.-	alkaloid; xylan	alpha-tomatine (glycoalkaloids); arabinoxylan
+GH43_12;CBM91	3.2.1.37	xylan	xylan
+CE8;PL10_1	3.1.1.11	pectin	pectin
+GH43_10;CBM91	3.2.1.55;3.2.1.37	xylan	xylan; arabinoxylan
+PL6;PL6_1	4.2.2.11;4.2.2.-;4.2.2.3;4.2.2.26	alginate	alginate
+GH16_3	3.2.1.39	beta-glucan	beta-1,3-glucan (fungi, algae, plant)
+PL6_1	4.2.2.3	alginate	alginate
+PL6;PL6_1	4.2.2.11;4.2.2.-;4.2.2.3	alginate	alginate
+GH43_2	3.2.1.55	xylan	arabinoxylan
+GH5_25	3.2.1.4;3.2.1.8	beta-glucan; xylan	cellulose, beta-glucan; xylan
+PL7	4.2.2.11;4.2.2.-;4.2.2.3	alginate	alginate
+PL40	4.2.2.-	algal	ulvan
+GH13_20	3.2.1.1	starch	starch, glycogen, and malto-oligosaccharides
+GH43_29;CBM6	3.2.1.55	xylan	arabinoxylan
+GH3	3.2.1.21;3.2.1.126;3.2.1.37	polyphenol; beta-glucan; xylan	coniferin (glucoside of coniferyl alcohol); beta-glucan; xylan
+GH2	3.2.1.31	beta-glucuronan	beta-glucuronoside
+GH23;CBM50	4.2.2.n1	peptidoglycan	peptidoglycan
+GH30_4	3.2.1.38	beta-fucosides	beta-fucoside
+PL25	4.2.2.-	algal	ulvan
+CBM51;GH27	3.2.1.22	alpha-galactan	alpha-galactoside, galactose oligosaccharides (plant), galactomannans (plant) and galactolipid (animal)
+GH5_25;CBM4	3.2.1.4	beta-glucan	cellulose, beta-glucan
+GH138	3.2.1.173	pectin	pectin (rhamnogalacturonan II)
+GH43_10;CBM91	3.2.1.37	xylan	xylan
+GH43_7;GH43_7	3.2.1.-	arabinan; xylan	arabinan, arabinoxylan; arabinan; beta-1,3-xylan (algae)
+GH43_28	3.2.1.-	arabinan; xylan	arabinan, arabinoxylan; arabinan; beta-1,3-xylan (algae)
+GH43_12	3.2.1.37	xylan	xylan
+GH13_26	5.4.99.15	starch	starch
+GH13_10	3.2.1.141;3.2.1.1	starch	starch, glycogen, and malto-oligosaccharides; starch
+GH43_26	3.2.1.-	arabinan; xylan	arabinan, arabinoxylan; arabinan; beta-1,3-xylan (algae)
+GH43_12;CBM91	3.2.1.55	xylan	arabinoxylan
+GH13_30	3.2.1.20	starch	starch
+GH31	3.2.1.177	xyloglucan	xyloglucan (plant)
+GH43_4	3.2.1.99	arabinan	arabinan
+GH27	3.2.1.22	alpha-galactan	alpha-galactoside, galactose oligosaccharides (plant), galactomannans (plant) and galactolipid (animal)
+GH1	3.2.1.21;3.2.1.-	beta-glucan; polyphenol	beta-glucan; rutin (polyphenol); beta-glucoside
+GH2	3.2.1.-	pectin	pectin (rhamnogalacturonan II)
+GH30_2	3.2.1.37	xylan	xylan
+GH43_12	3.2.1.55	xylan	arabinoxylan
+GH43_27	3.2.1.37;3.2.1.55	xylan	xylan; arabinoxylan
+GH13_16	5.4.99.16	starch	maltose
+GH65	2.4.1.64	alpha-glucan	trehalose
+GH81	3.2.1.39	beta-glucan	β-1,3-glucan
+GH142	3.2.1.185	pectin	pectin (rhamnogalacturonan II)
+GH165	3.2.1.23	beta-galactan	beta-galactoside
+GH31	3.2.1.22	alpha-galactan	alpha-galactoside
+GH120	3.2.1.37	xylan	xylan
+GH13_18	2.4.1.352	glucosylglycerate	glucosylglycerate
+GH168	3.2.1.211	fucoidan	Sulfated fucans (algae)
+GH3	3.2.1.37;3.2.1.55;3.2.1.21	beta-glucan; xylan; arabinan	beta-glucan; xylan; arabinan, arabinoxylan
+GH13_41	3.2.1.1	starch	starch, glycogen, and malto-oligosaccharides
+GH1	3.2.1.-	beta-glucan; polyphenol	beta-glucan; rutin (polyphenol)
+GH5_39	3.2.1.4	beta-glucan	cellulose, beta-glucan
+GH3	3.2.1.21;3.2.1.37	beta-glucan; xylan	beta-glucan; xylan
+GH68;GH68	2.4.1.10	fructan	synthesize β (2-6)-linked fructan levan with sucrose as substrate
+GH13	3.2.1.41;3.2.1.1;3.2.1.68	starch	starch, glycogen, and malto-oligosaccharides; pullulan (starch degradation by fungi)
+GH125	3.2.1.163	alpha-mannan, plant N-glycan	alpha-1,6-mannobiose
+PL38	4.2.2.14	host glycan	host glycan
+GH63	3.2.1.170	alpha-glucan	mannosylglycerate
+GH13_11	3.2.1.68	starch	starch, glycogen, and malto-oligosaccharides
+GH9	3.2.1.4;3.2.1.-;3.2.1.151	beta-glucan; cellulose	xanthan; xyloglucan; cellulose
+GH29;CBM32;CBM32	3.2.1.111;3.2.1.51	host glycan	human milk oligosaccharides, mucin, host glycan
+GH13_19	3.2.1.1	starch	starch, glycogen, and malto-oligosaccharides
+GH74	3.2.1.151;3.2.1.150	xyloglucan	oligoxyloglucan; xyloglucan
+GT2;GH26;GH158	2.4.1.12;3.2.1.78	beta-mannan	beta-mannan (plant)
+GH13_13	3.2.1.41;3.2.1.68	starch	pullulan (starch degradation by fungi); starch, glycogen, and malto-oligosaccharides
+PL8_2	4.2.2.20	host glycan	glycosaminoglycans(host glycan)
+GH13_18	2.4.1.329	sucrose	sucrose
+GH2	3.2.1.23;3.2.1.31	beta-galactan; beta-glucuronan	beta-galactoside; beta-glucuronoside
+PL10_1;CE8	4.2.2.2	pectin	pectin
+GH141	3.2.1.51	pectin	pectin (rhamnogalacturonan II)
+GH139	3.2.1.-	pectin	pectin (rhamnogalacturonan II)
+GH143	3.2.1.-	pectin	pectin (rhamnogalacturonan II)
+GH33	3.2.1.-	pectin	pectin (rhamnogalacturonan II), lipopolysaccharides (bacteria)
+GH2;CBM57	3.2.1.31	beta-glucuronan	beta-glucuronoside
+GH65	2.4.1.282;2.4.1.216	alpha-glucan; exo-polysaccharide	trehalose, kojibiose; glucopyranosyl-α-1,3-rhamnose (bacteria lipopolysaccharides or capsule polysaccharides)
+GH148	3.2.1.-	beta-glucan	beta-glucan and lichenin
+GH94	2.4.1.333	beta-glucan	1,2-β-oligoglucan
+GH13_39	3.2.1.1;3.2.1.41	starch	starch, glycogen, and malto-oligosaccharides; pullulan (starch degradation by fungi)
+GH1	3.2.1.86;3.2.1.21;3.2.1.37	beta-glucan; xylan	beta-glucoside; beta-glucoside, beta-xyloside; 6-phospho-beta-glucoside
+GH13_32	3.2.1.1;3.2.1.116	starch	starch, glycogen, and malto-oligosaccharides; starch
+GH1	3.2.1.21;3.2.1.-;3.2.1.23	beta-glucan; polyphenol; beta-galactan	beta-glucan; rutin (polyphenol); beta-glucoside; beta-galactoside
+GH105;CBM32	3.2.1.172	pectin	pectin (rhamnogalacturonan I)
+GH71	3.2.1.59	alpha-glucan	α-1,3-glucan
+GH77;GH13_26	2.4.1.25;5.4.99.15	glycogen; starch	glycogen; starch; amylomaltase
+GH100	3.2.1.26	sucrose	sucrose
+GH94	2.4.1.-;2.4.1.333	chitin; beta-glucan	4-O-β-glucosyl-galactose; 1,2-β-oligoglucan
+GH23	3.2.1.17;4.2.2.n1	peptidoglycan	peptidoglycan
+GH92	3.2.1.-;3.2.1.113;3.2.1.24	host glycan	host N-glycan Man9(GlcNac)2; host N-glycan
+GH92	3.2.1.113;3.2.1.-	host glycan	host N-glycan Man9(GlcNac)2; host N-glycan
+GH89	3.2.1.50	host glycan	α-Linked N-acetylglucosamine mucin
+GH57	2.4.1.18;3.2.1.1	beta-glucan; starch	beta-1,4-glucan, glycogen; starch, glycogen and related polysaccharides and oligosaccharides(containing three or more (1->4)-alpha-linked D-glucose units)
+PL10_1	4.2.2.2	pectin	pectin
+GH9	3.2.1.4;3.2.1.6;3.2.1.151	beta-glucan; cellulose	xyloglucan; cellulose; beta-glucan(laminarin, lichenin and cereal D-glucans)
+GH27	3.2.1.88	arabinogalactan protein	arabinogalactan
+GH39	3.2.1.21	beta-glucan	beta-glucoside (exopolysaccharide, cellubiose)
+GH30_8	3.2.1.136;3.2.1.8	xylan	xylan
+GH8	3.2.1.8;3.2.1.32;3.2.1.6	beta-glucan; xylan	beta-glucan (laminarin, lichenin and cereal D-glucans); xylan
+GH38	3.2.1.-	alpha-mannan	alpha-mannan (fungi)
+GH31	2.4.1.161;3.2.1.177	starch; xyloglucan	glycogen and starch; xyloglucan (plant)
+GH35	3.2.1.23	pectin	beta-galactoside (pectin)
+GH94	2.4.1.-	chitin	4-O-β-glucosyl-galactose
+PL9	4.2.2.2	pectin	pectate
+PL4	4.2.2.23	pectin	rhamnogalacturonan I(pectin from the plant cell wall)
+GH38	3.2.1.24	host glycan	N-glycan, O-glycans, alpha-mannan (fungi)
+GH2	3.2.1.165	chitosan	chitosan or chitosan oligosaccharides (nonacetylated chitin)
+GH5_7	3.2.1.25	beta-mannan	N-glycan, beta-mannan
+GH94	2.4.1.49	cellulose	cellodextrin
+GH130	2.4.1.319;2.4.1.320	beta-mannan	beta-mannan
+GH5_41	3.2.1.78	beta-mannan	mannans, galactomannans and glucomannan
+GH5_10;CBM35	3.2.1.78	beta-mannan	mannans, galactomannans and glucomannan
+GH47	3.2.1.113	host glycan	protein-linked N-glycan (host glycan)
+GH2	3.2.1.152	host glycan	N-glycan (plant)
+GH66	3.2.1.11	alpha-glucan	dextran
+GH5_40	3.2.1.78	beta-mannan	mannans, galactomannans and glucomannan
+GH13	3.2.1.20	starch	starch
+GH13_10	3.2.1.141	starch	starch
+GH57	2.4.1.18	beta-glucan	beta-1,4-glucan, glycogen
+GH13_33	5.4.99.16	starch	maltose
+GH17;GT2	2.4.1.-	beta-glucan	beta-1,3-glucan (fungi, algae, plant)
+GH57	3.2.1.1;2.4.1.18	beta-glucan; starch	beta-1,4-glucan, glycogen; starch, glycogen and related polysaccharides and oligosaccharides(containing three or more (1->4)-alpha-linked D-glucose units)
+PL6	4.2.2.-	alginate	alginate
+GH35	3.2.1.165	chitin	chitosan, chitin
+GH13_20	3.2.1.54;3.2.1.133;3.2.1.135	starch	starch; pullulan (starch degradation by fungi); cyclomaltodextrins
+GH3	3.2.1.-;3.2.1.21	beta-glucan	beta-1,3-1,4-glucan (laminarin, lichenin and cereal D-glucans); beta-1,2-glucan (bacteria); beta-1,3-glucan (laminarin, lichenin and cereal D-glucans); beta-glucan
+GH13_18;GH13_18	2.4.1.329	sucrose	sucrose
+GH65	3.2.1.216	alpha-glucan	kojibiose
+PL1;CBM77	4.2.2.2	pectin	pectin
+GH147	3.2.1.23	beta-galactan	galactan
+GH81;CBM6	3.2.1.39	beta-glucan	β-1,3-glucan
+CE4;GH153	3.5.1.-;3.2.1.-	exo-polysaccharide; chitin; peptidoglycan	deacetylated poly-β(1,6)-N-acetyl-glucosamine (bacterial PNAG for biofilm); Chitooligosaccharides; peptidoglycan
+GH148	3.2.1.4	beta-mannan	glucomannan
+PL22	4.2.2.6	pectin	pectin( D-galacturonate)
+GH5_29	3.2.1.123;3.2.1.46	glycolipid	glycosphingolipids; glycosphingolipid, galactolipids
+GH43_34	3.2.1.55	xylan	arabinoxylan
+GH43_19;GH43_34	3.2.1.55	xylan	arabinoxylan
+GH27;CBM51;CBM51	3.2.1.88	arabinogalactan protein	arabinogalactan
+GH5_2	3.2.1.4	beta-glucan	cellulose, beta-glucan
+GH5_4;CBM64	3.2.1.4;3.2.1.-;3.2.1.151;3.2.1.8	beta-mannan; xylan; beta-glycan; polyphenol; xyloglucan; beta-glucan	beta-mannan; arabinoxylans; beta-glycoside; rutin (polyphenol); glucomannan; xyloglucan; cellulose, beta-glucan; xylan
+PL9_1	4.2.2.2	pectin	pectate
+GH16	3.2.1.73;3.2.1.6	beta-glucan	beta-1,3-1,4-glucan (laminarin, lichenin and cereal D-glucans)
+GH5_2	3.2.1.4;3.2.1.132	chitosan; beta-glucan	chitosan; cellulose, beta-glucan
+GH16_3;CBM6	3.2.1.39;3.2.1.6;3.2.1.73	beta-glucan	beta-1,3-glucan (fungi, algae, plant); beta-1,3-1,4-glucan (laminarin, lichenin and cereal D-glucans)
+GH3;CBM6	3.2.1.37;3.2.1.55;3.2.1.21;3.2.1.6;3.2.1.73;3.2.1.8	beta-glucan; xylan; arabinan	beta-glucan; xylan; arabinan, arabinoxylan; beta-1,3-glucan (laminarin, lichenin and cereal D-glucans)
+GH9	3.2.1.4;3.2.1.-	beta-glucan; cellulose	xanthan; cellulose
+PL11	4.2.2.23;4.2.2.24	pectin	rhamnogalacturonan I(pectin from the plant cell wall)
+GH5_1;CBM64	3.2.1.4	beta-glucan	cellulose, beta-glucan
+GH2	3.2.1.23;3.2.1.-	pectin; beta-galactan	pectin (rhamnogalacturonan II); beta-galactoside
+GH39	3.2.1.37	xylan	xylan
+CBM35;PL1_2	4.2.2.2	pectin	pectin
+GH5_38	3.2.1.4;3.2.1.73	beta-glucan	cellulose, beta-glucan; beta-glucan(contains both (1->3)- and (1->4)-bonds),lichenin and cereal beta-glucan
+GH1	3.2.1.23	beta-galactan	beta-galactoside
+GH5_2;CBM6;CBM6	3.2.1.4	beta-glucan	cellulose, beta-glucan
+GH5_2;CBM6	3.2.1.4	beta-glucan	cellulose, beta-glucan
+GH48;CBM64;CBM64	3.2.1.176;3.2.1.4;3.2.1.14	chitin; cellulose	chitin and chitodextrin; cellulose
+GH12	3.2.1.151	xyloglucan	xyloglucan
+GH9;CBM64	3.2.1.4;3.2.1.-;3.2.1.8	beta-glucan; cellulose	xanthan; cellulose
+PL3_1	4.2.2.2	pectin	pectate
+GH43_18;GH51	3.2.1.55	xylan; arabinan	arabinoxylan; arabinan, arabinoxylan
+GH13_14	3.2.1.68;3.2.1.41	starch	pullulan (starch degradation by fungi); starch, glycogen, and malto-oligosaccharides
+GH74	3.2.1.151	xyloglucan	xyloglucan
+GH27	3.2.1.22;2.4.1.-	raffinose; alpha-galactan	raffinose family oligosaccharide (plant); alpha-galactoside, galactose oligosaccharides (plant), galactomannans (plant) and galactolipid (animal)
+GH74;GH74;CBM64	3.2.1.151;3.2.1.4	xyloglucan; cellulose	xyloglucan; carboxymethyl cellulose
+PL11_2	4.2.2.23	pectin	rhamnogalacturonan I(pectin from the plant cell wall)
+GH5_10;CBM32;CBM64	3.2.1.78	beta-mannan	mannans, galactomannans and glucomannan
+GH97	3.2.1.20	alpha-glucan	alpha-glucose residue
+GH43_29	3.2.1.-;3.2.1.55	arabinan; xylan	arabinan, arabinoxylan; arabinan; beta-1,3-xylan (algae); arabinoxylan
+GH44	3.2.1.4;3.2.1.151;3.2.1.8	xyloglucan; beta-glucan	xyloglucan; cellulose, lichenin and cereal beta-glucan
+GH5_8	3.2.1.78	beta-mannan	mannans, galactomannans and glucomannan
+GH5_46;CBM9	3.2.1.4	beta-glucan	cellulose, beta-glucan
+GH13_32	3.2.1.1	starch	starch, glycogen, and malto-oligosaccharides
+GH148;CBM4;GH148	3.2.1.4;3.2.1.-	beta-mannan; beta-glucan	glucomannan; beta-glucan and lichenin
+GH5_10	3.2.1.78	beta-mannan	mannans, galactomannans and glucomannan
+GH9	3.2.1.4	cellulose	cellulose
+GH5_25;CBM6	3.2.1.4;3.2.1.8	beta-glucan; xylan	cellulose, beta-glucan; xylan
+GH65	2.4.1.-	alpha-glucan	kojibiose and alpha-1,2-oligoglucan
+GH13_6	3.2.1.1;3.2.1.98	starch	starch, glycogen, and malto-oligosaccharides
+GH33;GH29	3.2.1.111;3.2.1.51	host glycan	human milk oligosaccharides, mucin, host glycan
+PL17_2;PL17	4.2.2.3	alginate	alginate
+PL7_5	4.2.2.26	alginate	alginate
+PL6;PL6_1	4.2.2.11;4.2.2.-	alginate	alginate
+PL6;PL6_1	4.2.2.3	alginate	alginate
+PL6	4.2.2.3	alginate	alginate
+GH2;CBM35	3.2.1.23	beta-galactan	beta-galactoside
+PL24	4.2.2.-	algal	ulvan
+GH5	3.2.1.123	glycolipid	glycosphingolipids
+PL28	4.2.2.-	algal	ulvan
+PL37	4.2.2.20;4.2.2.8;4.2.2.-	host glycan	glycosaminoglycans(host glycan); heparin sulfate(host glycan)
+CE1;GH31	2.4.1.161	starch	glycogen and starch
+GH94	2.4.1.20	cellulose	cellobiose
+GH13_18;GH13_18	2.4.1.352	glucosylglycerate	glucosylglycerate
+GH144	3.2.1.71	beta-glucan	beta-1,2-glucan (bacteria)
+GH5_7	3.2.1.78	beta-mannan	mannans, galactomannans and glucomannan
+GH43_10	3.2.1.55;3.2.1.37	xylan	xylan; arabinoxylan
+GH95	3.2.1.63	xyloglucan, host glycan	alpha1,2-L-fucosidase sugar
+GH110	3.2.1.-;3.2.1.22	host glycan	blood group B substances, host glycans
+GH117;GH117;GH95	3.2.1.63;3.2.1.51	host glycan; xyloglucan, host glycan	alpha-L-fucoside; alpha1,2-L-fucosidase sugar
+GH94	2.4.1.321	cellulose	cellobionic acid
+GH9	3.2.1.4;3.2.1.91;3.2.1.73;3.2.1.-	beta-glucan; cellulose	xanthan; cellulose; beta-glucan, lichenin; cellulose and cellotetraose
+GH57	3.2.1.1;3.2.1.41	starch; alpha-glucan	starch, glycogen and related polysaccharides and oligosaccharides(containing three or more (1->4)-alpha-linked D-glucose units); pullulan, maltodextrins and cyclodextrin
+GH13_20	3.2.1.-	starch	starch
+CBM20;GH77	2.4.1.25	starch	amylomaltase
+GH153	3.2.1.-	exo-polysaccharide	deacetylated poly-β(1,6)-N-acetyl-glucosamine (bacterial PNAG for biofilm)
+CBM41;GH13_14	3.2.1.41;3.2.1.1;3.2.1.68	starch	starch, glycogen, and malto-oligosaccharides; pullulan (starch degradation by fungi)
+GH116	3.2.1.21	exo-polysaccharide	human bile acid, archaea exo-polysaccharide (EPS)
+GH23;CBM50	3.2.1.14	chitin	chitin
+CBM41;CBM48;GH13_14	3.2.1.41;3.2.1.1;3.2.1.68	starch	starch, glycogen, and malto-oligosaccharides; pullulan (starch degradation by fungi)
+GH5_46;CBM6;CBM6	3.2.1.75	beta-glucan	laminarin (algae), pustulan (fungi)
+GH42;GH164	3.2.1.25	beta-mannan	beta-mannoside
+GH173	3.2.1.23	pectin	beta-galactoside (pectin)
+GH5_28	3.2.1.123	glycolipid	glycosphingolipids
+GH9	3.2.1.4;3.2.1.-;3.2.1.73	beta-glucan; cellulose	xanthan; cellulose; beta-glucan, lichenin
+GH2;GH2	3.2.1.23	beta-galactan	beta-galactoside
+GH9	3.2.1.74;3.2.1.165	chitosan; cellulose	chitosan or chitosan oligosaccharides; cellulose
+GH10	3.2.1.4;3.2.1.8	beta-glucan; xylan	cellulose, xylan, beta-1,4-glucan; xylan
+GH99	3.2.1.130;3.2.1.198	host glycan; alpha-mannan	host N-glycan; alpha-mannans (fungi)
+GH129	3.2.1.49	host glycan	mucin-type O-glycans
+PL33_1	4.2.2.1	host glycan	hyaluronate(host glycan)
+GH117;GH29	3.2.1.51	host glycan	human milk oligosaccharides, mucin, host glycan
+CBM67;GH78;CE1	3.2.1.40	alpha-rhamnoside	α-L-rhamnosidase in polyphenol (naringin, rutin, hesperidin), ulvan, pectin, arabinogalactan-protein
+GH5_48	3.2.1.132;3.2.1.52	chitosan; chitin	chitosan; chitin
+GH148;GH148	3.2.1.-;3.2.1.4	beta-mannan; beta-glucan	glucomannan; beta-glucan and lichenin
+GH29;CBM32	3.2.1.51	host glycan	human milk oligosaccharides, mucin, host glycan
+GH68;GH68	2.4.1.10;3.2.1.26	fructan	synthesize β (2-6)-linked fructan levan with sucrose as substrate; synthesize β (2-1)-linked fructan
+GH18;CE4	3.5.1.104	peptidoglycan	peptidoglycan
+GH73;CBM50	3.2.1.-	peptidoglycan	peptidoglycan
+GH13_7	3.2.1.1	starch	starch, glycogen, and malto-oligosaccharides
+PL6_1	4.2.2.11;4.2.2.-	alginate	alginate
+PL7_5;PL7_5	4.2.2.26	alginate	alginate
+GH50	3.2.1.81	agarose	porphyran, agarose
+GH26	3.2.1.4;3.2.1.73	beta-glucan	beta-glucan
+GH92	3.2.1.24	host glycan	host N-glycan
+GH43_12;CBM91	3.2.1.37;3.2.1.55	xylan	xylan; arabinoxylan
+GH3;CBM6	3.2.1.21;3.2.1.74;3.2.1.-;3.2.1.6	beta-glucan	beta-1,3-1,4-glucan (laminarin, lichenin and cereal D-glucans); beta-1,2-glucan (bacteria); beta-1,3-glucan (laminarin, lichenin and cereal D-glucans); beta-glucan; cellodextrin (beta-1,3-glucan)
+PL7_5	4.2.2.3;4.2.2.11;4.2.2.-	alginate	alginate
+CBM90;PL28;CBM90	4.2.2.-	ulvan	ulvan
+PL24;CBM90	4.2.2.-	algal	ulvan
+GH84	3.2.1.169	host glycan	cleave beta-O-linked GlcNAc of host glycan
+GH13_3;GH133	2.4.99.16	starch	starch, glycogen, and malto-oligosaccharides
+GH130	2.4.1.339	beta-mannan	beta-mannan
+CBM32;GH16_3	3.2.1.39	beta-glucan	beta-1,3-glucan (fungi, algae, plant)
+GH43_12;CBM91	3.2.1.55;3.2.1.37	xylan	xylan; arabinoxylan
+GH86	3.2.1.81;3.2.1.178	agarose	porphyran; porphyran, agarose
+GH130	2.4.1.-	beta-mannan	mannooligosaccharides; beta-mannan
+GH43_2;CBM6	3.2.1.55	xylan	arabinoxylan
+GH16_3;CBM4;CBM4	3.2.1.6;3.2.1.73	beta-glucan	beta-1,3-1,4-glucan (laminarin, lichenin and cereal D-glucans)
+GH95	3.2.1.63;3.2.1.51	host glycan; xyloglucan, host glycan	alpha-L-fucoside; alpha1,2-L-fucosidase sugar
+PL6_2	4.2.2.-	alginate	alginate
+GH5_28;GH5_22	3.2.1.123;3.2.1.4	glycolipid; beta-glucan	glycosphingolipids; cellulose, beta-glucan
+CBM2;CBM2;GH18	3.2.1.14;3.2.1.-;3.2.1.132	peptidoglycan; chitin	peptidoglycan; chitooligosaccharides (symbiotic nitrogen-fixing bacteria); chitin
+CBM9;GH13_20	3.2.1.-;3.2.1.54	starch	starch; cyclomaltodextrins
+GH5	3.2.1.78	beta-mannan	mannans, galactomannans and glucomannan
+GH13_26;GH13_26	5.4.99.15	starch	starch
+GH79	3.2.1.166	host glycan	heparan sulfate proteoglycans
+GH43_11	3.2.1.37;3.2.1.55	xylan	xylan; arabinoxylan
+CBM22;GH10	3.2.1.8;3.2.1.-	alkaloid; xylan	alpha-tomatine (glycoalkaloids); arabinoxylan; xylan
+GH23	3.2.1.14	chitin	chitin
+GH37;GH37	3.2.1.28	trehalose	alpha-trehalose
+PL29;CBM32	4.2.2.20	host glycan	glycosaminoglycans(host glycan)
+GH57;GH57	3.2.1.1;2.4.1.25	starch	starch, glycogen, and malto-oligosaccharides; starch, glycogen and related polysaccharides and oligosaccharides(containing three or more (1->4)-alpha-linked D-glucose units)
+GH13_36	3.2.1.54	starch	cyclomaltodextrins
+GH5_46;CBM6;CBM6	3.2.1.4	beta-glucan	cellulose, beta-glucan
+GH74;GH74	3.2.1.151	xyloglucan	xyloglucan
+PL15	4.2.2.3	alginate	alginate
+PL7	4.2.2.3	alginate	alginate
+GH16_3	3.2.1.6	beta-glucan	beta-1,3-1,4-glucan (laminarin, lichenin and cereal D-glucans)
+GH30	3.2.1.8	xylan	xylan
+GH5_4	3.2.1.4	beta-glucan	cellulose, beta-glucan
+GH2	3.2.1.152;3.2.1.25	host glycan; beta-mannan	N-glycan (plant); beta-mannoside
+GH31	3.2.1.20;3.2.1.10	starch	starch
+GH30_3	3.2.1.-	xylan	xylan
+GH32	2.4.1.-;3.2.1.7	fructan	levan (fructan); graminan- and levan-type fructans; fructan(inulin, levan and sucrose); inulin
+PL9_4	4.2.2.-	peptidoglycan	thiopeptidoglycan
+GH32	3.2.1.26;3.2.1.64	fructan	fructan(inulin, levan and sucrose)
+GH3	3.2.1.-	beta-glucan	beta-1,3-1,4-glucan (laminarin, lichenin and cereal D-glucans); beta-1,2-glucan (bacteria); beta-1,3-glucan (laminarin, lichenin and cereal D-glucans)
+PL6_1	4.2.2.11;4.2.2.-;4.2.2.3	alginate	alginate
+CE15;GH10	3.1.1.117;3.2.1.8	xylan	xylan
+CBM38;GH32	3.2.1.65;3.2.1.26;3.2.1.153;3.2.1.64;2.4.1.99	fructan	fructan(inulin, levan and sucrose); fructan; levan (fructan)
+GH8;GT2	2.4.1.12	beta-glucan	cellulose
+GH5_46;CBM6	3.2.1.4	beta-glucan	cellulose, beta-glucan
+CBM4;GH10	3.2.1.8	xylan	xylan
+GH13	2.4.99.16	starch	starch, glycogen, and malto-oligosaccharides
+PL15_1	4.2.2.26	alginate	alginate
+GH16_3;CBM6	3.2.1.73;3.2.1.39	beta-glucan	beta-1,3-glucan (fungi, algae, plant); beta-1,3-1,4-glucan (laminarin, lichenin and cereal D-glucans)
+PL39	4.2.2.-	algal	alginate
+GH13_24	3.2.1.1	starch	starch, glycogen, and malto-oligosaccharides
+GH99	3.2.1.130	host glycan	host N-glycan
+GH13_20	3.2.1.54;3.2.1.135	starch	pullulan (starch degradation by fungi); cyclomaltodextrins
+PL6;PL6_1	4.2.2.11;4.2.2.-;4.2.2.26	alginate	alginate
+GH28;GH105	3.2.1.67;3.2.1.-	ulvan; pectin	ulvan; pectin; xylogalacturonan (pectin); galacturonan (pectin)
+GH2;GH53	3.2.1.23;3.2.1.89	beta-galactan; arabinogalactan protein	beta-galactoside; arabinogalactan
+GH9;CE4	3.5.1.104	peptidoglycan	peptidoglycan
+GH13_20	3.2.1.54	starch	cyclomaltodextrins
+PL1_5	4.2.2.2	pectin	pectin
+GH13_1	3.2.1.1	starch	starch, glycogen, and malto-oligosaccharides
+GH31	3.2.1.10;3.2.1.20	starch	starch
+CE4;GH3	3.2.1.37;3.2.1.55;3.2.1.21	beta-glucan; xylan; arabinan	beta-glucan; xylan; arabinan, arabinoxylan
+GH43_2;CBM6	3.2.1.37;3.2.1.55	xylan	xylan; arabinoxylan
+CBM20;CBM20;GH77	2.4.1.25	starch	amylomaltase
+GH13_19	3.2.1.-	starch	starch
+GH3;GH17	3.2.1.21;3.2.1.39	beta-glucan	beta-1,3-glucan (algae, plant); beta-glucan
+CBM48;GH13_10	3.2.1.141;3.2.1.1	starch	starch, glycogen, and malto-oligosaccharides; starch

@@ -24,6 +24,43 @@ makeCountMatrix <- function(count_data) {
     as.matrix()
 }
 
+# Normalisation: TPM ----
+# Requires numeric matrix
+norm_TPM <- function(count_matrix, gene_length) {
+  
+  rpk <- sweep(count_matrix, 1, gene_length, "/")
+  tpm <- sweep(rpk, 2, colSums(rpk)/1e6, "/")
+  
+  tpm
+  
+}
+
+# Normalisation: Robust centred log-ratio ----
+# Also includes option for gene length correction prior to normalisation.
+# Requires numeric matrix
+norm_rCLR <- function(count_matrix, 
+                      gene_length_correction = FALSE, gene_length = NULL) {
+  
+  if (!requireNamespace("vegan", quietly = TRUE)) library(vegan)
+  
+  if (gene_length_correction && is.null(gene_length)) {
+    stop("Please supply gene length as a numeric vector for correction.")
+  }
+  
+  if (gene_length_correction) {
+    count_matrix <- sweep(count_matrix,1 , gene_length, "/")
+  }
+  
+  decostand(x = count_matrix, method = "rclr", MARGIN = 2)
+  
+}
+
+# Normalisation: TMM ----
+# Also includes option for gene length correction prior to normalisation.
+# Requires numeric matrix
+
+
+
 # Normalize counts ----
 # Methods are:
 # - TPM (tpm)
