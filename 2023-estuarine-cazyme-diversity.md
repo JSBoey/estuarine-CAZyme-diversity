@@ -1087,17 +1087,237 @@ module load pigz
 tar -cvf - * | pigz --best -c -p 8 > ../../../main/data/gene_transcript_counts.tar.gz
 ```
 
+# 5. Read coverage
 
+This was done after the data was generated. Therefore, the data was pulled from the project directory.
 
+## 5.1 Create directories and pull inputs
 
+Create a separate directory in a scratch directory of choice.
 
+```sh
+# Create necessary directories
+mkdir -p {alignments/{bam,cram},coverage,counts}
 
+# Pull inputs
+main=/nesi/project/ga02676/Waiwera_project/boey_work/estuarine-CAZyme-diversity
+cp ${main}/data/{read_alignment_cram.tar,gene_transcript_counts.tar.gz} .
 
+# Decompress and extract
+tar -xvf read_alignment_cram.tar -C alignments/cram
+tar -xzvf gene_transcript_counts.tar.gz -C coverage/
 ```
-srun --account uoa00348 --job-name "test-sp6gpu" --gpus-per-node A100-1g.5gb:1 --cpus-per-task 8 --mem 16GB --time 2:00:00 --pty bash
 
+`gene_transcript_counts.tar.gz` is required as it contains the original SAF file used in featureCounts. This is the basis of the BED file.
 
+## 5.2 File conversions
+
+BEDTools does not accept CRAM inputs. Therefore all CRAM files must be converted to BAM files as per the following file.
+
+`cram2bam.sl` as follows:
+
+```sh
+#!/bin/bash -e
+#SBATCH --job-name=cram2bam
+#SBATCH --account=ga02676
+#SBATCH --time=30:00
+#SBATCH --mem=16G
+#SBATCH --cpus-per-task=32
+#SBATCH --output=slurm_out/%x.%j.%A_%a.out
+#SBATCH --error=slurm_err/%x.%j.%A_%a.err
+#SBATCH --array=0-65
+
+module purge
+module load SAMtools/1.19-GCC-12.3.0
+
+arr=(alignments/cram/*.cram)
+in=${arr[$SLURM_ARRAY_TASK_ID]}
+bn=$(basename ${in} .cram)
+outdir=alignments/bam
+ref=$(dirname ${in})/allbins_scaffolds
+
+printf "Input file: %s\n" ${in}
+
+samtools view \
+  -t ${ref}.fna.fai -T ${ref}.fna \
+  -@ $SLURM_CPUS_PER_TASK \
+  -b -o ${outdir}/${bn}.bam \
+  ${in}
+
+printf "Output file: %s\n" ${outdir}/${bn}.bam
 ```
 
+SAF file must be converted to BED file. However, the ordering needs to be in the order of the BAM files as genes/meta-features were ordered based on the indices of the metagenomic assemblies. Thus, coordinate and name ordering is not relevant here. **This step is important to use `bedtools coverage -sorted` for memory efficiencies and speed-up.**
+
+`saf2bed.sh` as follows:
+
+```sh
+#!/bin/bash -e
+
+module purge
+module load SAMtools/1.19-GCC-12.3.0 BEDTools/2.30.0-GCC-11.3.0
+
+bn=$(basename $1 .saf)
+dn=$(dirname $1)
+
+# Convert SAF to BED
+sed '1d' $1 \
+  | awk 'BEGIN {FS="\t"; OFS="\t"} {print $2, $3, $4, $1, $5}' \
+  > ${dn}/${bn}.bed
+
+# Compare 2 random BAM to ensure similar NODE ordering
+sam1=$(ls alignments/bam/WGS.*.bam | shuf -n 1)
+sam2=$(ls alignments/bam/WTS.*.bam | shuf -n 1)
+
+samtools view -H ${sam1} | grep '@SQ' | cut -f 2 | sed 's/SN://g' > names1
+samtools view -H ${sam2} | grep '@SQ' | cut -f 2 | sed 's/SN://g' > names2
+
+# Sort BED based on BAM order
+if cmp -s names1 names2; then
+  # BEDTools require names.txt with columns: chr length
+  samtools view -H ${sam1} \
+    | grep '@SQ' \
+    | cut -f2,3 \
+    | sed 's/[SL]N://g' \
+    > names.txt
+  bedtools sort -g names.txt -i ${dn}/${bn}.bed > ${dn}/${bn}.sorted.bed
+  rm names{1,2}
+else
+  printf "Nodes are sorted differently"
+fi
+
+# Sort BED based on chromosome names and start positions (not run)
+# sort -k1,1 -k2,2n ${dn}/${bn}.bed > ${dn}/${bn}.sorted.bed
+
+module purge
+unset sam1 sam2
+```
+
+## 5.3 Calculate coverage per sample
+
+`feature_cov.sl` as follows:
+
+```sh
+#!/bin/bash -e
+#SBATCH --job-name=fcov
+#SBATCH --account=ga02676
+#SBATCH --time=30:00
+#SBATCH --partition=milan
+#SBATCH --mem=16G
+#SBATCH --cpus-per-task=2
+#SBATCH --output=slurm_out/%x.%j.%A_%a.out
+#SBATCH --error=slurm_err/%x.%j.%A_%a.err
+#SBATCH --array=0-65
+
+module purge
+module load BEDTools/2.30.0-GCC-11.3.0
+
+arr=(alignments/bam/*.bam)
+in=${arr[$SLURM_ARRAY_TASK_ID]}
+bn=$(basename ${in} .bam)
+
+printf "Input: %s\n" ${in}
+
+printf "Calculating coverage\n"
+
+bedtools coverage \
+  -sorted -g names.txt \
+  -a counts/allbins_pred.sorted.bed \
+  -b ${in} \
+  > coverage/${bn}.cov.tsv
+```
+
+## 5.4 Join columns
+
+Outputs from `bedtools coverage` are the following columns:
+
+1. Contig (Feature ala BEDTools)
+2. ORF start
+3. ORF end
+4. Gene (Meta-feature ala BEDTools)
+5. Strand
+6. Number of aligned reads overlapping gene
+7. Number of bases of all aligned reads covering gene (base coverage per gene)
+8. Length of gene
+9. Fraction of bases of all aligned reads covering gene (read coverage per gene)
+
+Only columns 4, 6, and 7 are extracted for further use. Column headers are appended as per `clean_fcov.sh`:
+
+```sh
+#!/bin/bash -e
+
+# Select relevant columns in output and append headers
+
+arr=(coverage/*.cov.tsv)
+
+for file in ${arr[@]}; do
+  nm=$(basename ${file} .cov.tsv)
+  printf "Appending %s\n" ${nm}
+  cut -f 4,6,7 ${file} \
+    | sed "1i\node\t${nm}.reads_overlapped\t${nm}.bases_covered" \
+    > coverage/${nm}.scov.tsv
+done
+```
+
+Then, a recursive join is used to obtain a table of read depth and bases covered via `recursive_join.sh`:
+
+```bash
+#!/bin/bash -e
+
+# Define recursive function to join multiple scov tables
+# Thanks to rudimeier from StackOverflow:
+# https://unix.stackexchange.com/questions/364735/merge-multiple-files-with-join
+xjoin() {
+    local f
+
+    if [ "$#" -lt 2 ]; then
+        echo "xjoin: need at least 2 files" >&2
+        return 1
+    elif [ "$#" -lt 3 ]; then
+        join "$1" "$2"
+    else
+        f=$1
+        shift
+        join "$f" <(xjoin "$@")
+    fi
+}
+
+for i in WGS WTS; do
+  xjoin coverage/${i}*.scov.tsv \
+    | sed "s/${i}.//g" \
+    | sed 's/ /\t/g' \
+    > ${i}.feature_coverage.tsv
+
+done
+```
+
+## 5.5 Backup and transfer
+
+Relevant tables (`*.feature_coverage.tsv`) transferred to working local directory using `rclone`:
+
+```sh
+module load rclone
+
+for i in *.feature_coverage.tsv; do
+  rclone copy --verbose ${i} <destination>:<directory>
+done
+```
+
+Original outputs archived, compressed, and transferred to project directory:
+
+```bash
+module load pigz
+tar -vc coverage/*.cov.tsv *.feature_coverage.tsv \
+  | pigz -p 8 \
+  > $main/data/gene_transcript_coverage.tar.gz
+```
+
+Scripts transferred to project directory
+
+```bash
+cp *.s{l,h} $main/scripts/
+```
+
+----
 
 
