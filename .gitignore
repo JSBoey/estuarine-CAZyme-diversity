@@ -9,10 +9,4 @@ manuscript/
 statistics/
 .*
 _*
-*.RData
-*.Rhistory
-analysis_workflow*/
-.Rproj.user
-bin2*
-*.png
 scratch_script.R
