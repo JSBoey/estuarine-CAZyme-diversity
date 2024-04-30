@@ -238,37 +238,6 @@ lapplyAtDepth <- function(LIST, DEPTH, FUN) {
 }
 ```
 
-Get bin-contig mapping from `ANNOTATION` and return bin, contig, and contig size.
-
-```{r f-bin2contig}
-bin2contig <- function() {
-  ANNOTATION[
-    , .(bin, node)
-  ][
-    , `:=`(
-      contig = gsub("_\\d+$", "", node),
-      contig_size = getContigLength(node)
-    )
-  ][
-    , node := NULL
-  ] %>% 
-    unique()
-}
-```
-
-
-Get average read lengths from `RLEN`.
-
-```{r f-averlen}
-aveRLEN <- function() {
-  lapply(RLEN, \(dt) {
-    dt <- dt[, .(x = sum(as.numeric(read_length) * count) / sum(count)), by = sample]
-    return(setNames(dt$x, dt$sample))
-  })
-}
-```
-
-
 # Derived data
 
 ## MAG assembly and estimated genome size
@@ -277,13 +246,23 @@ Assembly size is the total contig size of a MAG.
 Genome size is the assembly size corrected for completeness and contamination.
 
 ```{r genome-size}
-tmp <- bin2contig()
+bin2contig <- ANNOTATION[
+  , .(bin, node)
+][
+  , `:=`(
+    contig = gsub("_\\d+$", "", node),
+    contig_size = getContigLength(node)
+  )
+][
+  , node := NULL
+] %>% 
+  unique()
+
 CHECKM[
-  , assembly_size := sapply(Rename, \(x) sum(tmp[bin == x]$contig_size))
+  , assembly_size := sapply(Rename, \(x) sum(bin2contig[bin == x]$contig_size))
 ][
   , genome_size := (assembly_size * 100/Completeness) - (assembly_size * Contamination/100)
 ]
-rm(tmp)
 ```
 
 
@@ -303,9 +282,17 @@ $$
 - $G$ is the assembly size of the MAG, i.e., the sum of all contig lengths in a bin
 
 ```{r read-cov}
+aveRLEN <- lapply(RLEN, \(dt) {
+  DT <- copy(dt)
+  DT <- DT[
+    , .(x = sum(as.numeric(read_length) * count) / sum(count)), by = sample
+  ]
+  return(setNames(DT$x, DT$sample))
+})
+
 BINCOV <- mapply(
   \(dt, rlen) {
-    DT <- na.omit(bin2contig()[dt, on = c("contig")])
+    DT <- na.omit(bin2contig[dt, on = c("contig")])
     DT[
       , lapply(.SD, sum), 
       .SDcols = patterns("contig_size|Sed|Filt"), 
@@ -317,12 +304,14 @@ BINCOV <- mapply(
     ]
   },
   purrr::keep_at(CONTIGCOV, \(x) grepl("numreads", x)),
-  aveRLEN(),
+  aveRLEN,
   SIMPLIFY = FALSE
 )
+
+names(BINCOV) <- gsub(".numreads", "", names(BINCOV))
 ```
 
-The relative abundance of the MAG in a sample is its read coverage normalised by the proportion of the reads in a sample library relative to the maximum library size across all samples (Probst et al., 2018).
+The relative abundance of the MAG in a sample is its read coverage normalised by the proportion of the reads in a sample library relative to the maximum library size across all samples.
 
 $$
 A_r =
@@ -336,21 +325,44 @@ $$
 
 ## Length-normalised transcript/Gene per million
 
+First get reads per kilobase pair (RPK):
+
 $$
 \textrm{RPK} = \frac{N_g}{l_g}
 $$
 
+where
+
+- $N_g$ is the number of reads aligned to gene
+- $l_g$ is the gene length
+
+Then normalised by RPK sum:
+
 $$
-\textrm{TPM} = \frac{\textrm{RPK}}{\sum{\textrm{RPK}}}
+\textrm{TPM} = \frac{RPK}{\sum{\textrm{RPK}}}
 $$
 
-```{r f-tpm}
+```{r tpm}
 calcTPM <- function(m, gene.length) {
-  rpk <- sweep(m, 1, gene.length/1e3, "/")
-  sweep(rpk, 2, colSums(rpk)/1e6, "/")
+  
+  if (is.null(names(gene.length)))
+    stop("Gene length vector needs gene ID for rownames matching")
+  
+  if (all(names(gene.length) != rownames(m)))
+    gene.length <- gene.length[order(match(names(gene.length), rownames(m)))]
+  
+  if (all(names(gene.length) == rownames(m))) {
+    rpk <- sweep(m, 1, gene.length/1e3, "/")
+    sweep(rpk, 2, colsums(rpk)/1e6, "/")
+  }
+  
 }
+
+TPM <- lapply(COUNTS, \(m) {
+  calcTPM(m, setNames(ANNOTATION %$% (end - start + 1), ANNOTATION$node))
+})
 ```
 
-
+## Genome size
 
 

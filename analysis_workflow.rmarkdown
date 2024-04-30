@@ -1,0 +1,2266 @@
+---
+title: "Analysis workflow"
+author: "Jian Sheng Boey"
+format: 
+  html:
+    fig-format: svg
+    fig-width: 12
+    fig-height: 9
+execute: 
+  cache: true
+filters: 
+  - include-code-files
+---
+
+
+# Environment
+
+## Load libraries
+
+
+```{r lib}
+#| output: false
+
+# Fast utilities
+library(Rfast)
+library(Rfast2)
+
+# Ecological analysis
+library(vegan)
+
+# Wrangling: Strings
+library(glue)
+library(stringr)
+
+# Wrangling: Tables
+library(dplyr)
+library(matrixStats)
+library(data.table)
+
+# Functional programming
+library(future.apply)
+library(magrittr)
+library(listenv)
+
+# Visualisation
+library(ggplot2)
+library(patchwork)
+library(ggvenn)
+library(gridExtra)
+```
+
+
+## Read local data
+
+Set pattern for data source.
+
+::: {callout-note}
+## Declare: Data source
+
+Data source type is first declared here.
+:::
+
+
+```{r source-type}
+srctype <- c("WGS", "WTS")
+names(srctype) <- srctype
+```
+
+
+Import local numerical data.
+
+
+```{r numeric-data}
+BINCOV <- fread("data/bin_coverage.txt")
+COUNTS <- lapply(srctype, \(s) fread(glue("results/{s}_clean_count.tsv.gz")))
+CONTIGMAP <- lapply(srctype, \(s) fread(glue("data/{s}.contig_coverage.tsv")))
+```
+
+
+Import local annotation data.
+
+
+```{r annotation-data}
+ANNOTATION <- fread("results/curated_annotation_table.tsv")
+CHECKM <- fread("results/hq_bins.checkm_data.txt.gz")
+TAXONOMY <- fread("data/bin_taxonomy_final.txt")
+CAZYME <- as.data.table(readRDS("data/curated_cazymes_substrates.rds"))
+METADATA <- fread("data/sample_metadata.txt")
+SUMMARY <- lapply(srctype, \(s) fread(glue("results/{s}_count.tsv.summary")))
+SUBSTRATE <- as.data.table(readxl::read_excel("data/curated_dbcansub_substrate_map_2.xlsx"))
+```
+
+
+## Clean data
+
+Remove weird `_pred` suffix in MAG names in `ANNOTATION`.
+
+
+```{r clean-annotation}
+ANNOTATION$bin <- str_remove(ANNOTATION$bin, "_pred$")
+```
+
+
+Rename columns `BINCOV` and convert the data table to matrix.
+
+
+```{r clean-cov}
+setnames(BINCOV, \(nm) {
+  case_when(
+    str_detect(nm, "Filt") ~ str_replace(nm, "(.*)", "\\1_1"),
+    str_detect(nm, "Sed") ~ str_remove(nm, "Sample"),
+    .default = nm
+  )
+})
+BINCOV <- as.matrix(BINCOV[, -1], rownames = BINCOV$bin)
+```
+
+
+Rename columns in `CHECKM`.
+
+
+```{r clean-checkm}
+setnames(CHECKM, \(nm) str_replace(nm, " ", "_"))
+```
+
+
+Select columns with node ID and sample counts only then convert them to matrices in `COUNTS`.
+
+`METADATA$sample` is the authoritative vector on samples and their naming convention.
+
+
+```{r clean-count}
+COUNTS <- lapply(COUNTS, \(dt) {
+  nm <- names(dt)[names(dt) %in% METADATA$sample]
+  as.matrix(dt[, .SD, .SDcols = nm], rownames = dt$Geneid)
+})
+```
+
+
+Rename columns in `SUMMARY` to retain only sample names.
+
+
+```{r clean-mapsummary}
+SUMMARY <- lapply(SUMMARY, \(dt) {
+  setnames(dt, \(nm) str_extract(nm, "(Filt|Sed).S\\d_\\d"))
+})
+```
+
+
+Expand taxonomic levels then remove irrelavent columns in `TAXONOMY`.
+
+
+```{r clean-taxa}
+tax_level <- c("domain", "phylum", "class", "order", "family", "genus", "species")
+TAXONOMY <- TAXONOMY[
+  , (tax_level) := tstrsplit(gtdb_taxonomy, ";", fill = NA)
+][
+  , (tax_level) := lapply(.SD, \(s) gsub("[a-z]__", "", s)), .SDcols = tax_level
+][
+  , c("gtdb_taxonomy", "taxa") := NULL
+]
+```
+
+
+Split up base coverage and reads mapped in `BASECOV`, and then convert to matrix. Also store contig length as attribute.
+
+
+```{r clean-contigmap}
+CONTIGMAP <- lapply(CONTIGMAP, \(dt) {
+  list(
+    basecov = dt[, .SD, .SDcols = patterns("rname|bases")],
+    readcov = dt[, .SD, .SDcols = patterns("rname|reads")]
+  )
+}) %>% 
+  unlist(recursive = FALSE, use.names = TRUE) %>% 
+  lapply(., \(dt) {
+    m <- as.matrix(dt, rownames = "rname")
+    colnames(m) <- gsub(".*.((Sed|Filt).S\\d+_\\d+)..*", "\\1", colnames(m))
+    attr(m, "contig.length") <- as.numeric(
+      gsub(".*length_(\\d+)_.*", "\\1", rownames(m))
+    )
+    return(m)
+  })
+```
+
+
+
+# Standard objects
+
+**Habitat colour and fill**
+
+-   [Sediment: `"#F89812"`]{style="color:#F89812;"}
+-   [Water : `"#25A7F8"`]{style="color:#25A7F8;"}
+
+
+```{r}
+habitat_colour <- c("sediment" = "#F89812", "water" = "#25A7F8")
+```
+
+
+**Habitat shape**
+
+-   Sediment: 17 (solid triangle)
+-   Water : 19 (solid circle)
+
+
+```{r}
+habitat_shape = c("sediment" = 17, "water" = 19)
+```
+
+
+**Salinity gradient colours**
+
+Viridis, palette D, where dark purple is non-saline and yellow is marine.
+
+**CAZyme colours**
+
+-   [GH: `"#CE1235"`]{style="color:#CE1235;"}
+-   [PL: `"#59C9A5"`]{style="color:#59C9A5;"}
+
+
+```{r}
+cazyme_colour <- c("GH" = "#CE1235", "PL" = "#59C9A5")
+```
+
+
+**GH and PL encoding nodes**
+
+
+```{r}
+gp_node <- unique(CAZYME$NODE[grepl("(GH|PL)", CAZYME$FAMILY)])
+```
+
+
+**Samples shared between WTS and WGS**
+
+
+```{r}
+overlap_samples <- Reduce(intersect, lapply(COUNTS, colnames))
+```
+
+
+# Functions
+
+Calculate TPM from `COUNTS`.
+
+
+```{r f-calcTPM}
+calcTPM <- function(m, gene.length) {
+  # Calculate RPK first 
+  # (gene length in kbp)
+  rpk <- sweep(m, 1, gene.length/1e3, "/")
+  
+  # TPM from RPK 
+  # (normalised to per million reads per kbp)
+  sweep(rpk, 2, colSums(rpk)/1e6, "/")
+}
+```
+
+
+Partition a matrix based on column pattern and remove zero-sum rows.
+
+
+```{r f-partMatrix}
+partMatrix <- function(m, pattern) {
+  m <- m[, grepl(pattern, colnames(m))]
+  m[rowSums2(m) > 0, ]
+}
+```
+
+
+Perform `lapply()` at specified depth.
+
+
+```{r f-lapplyAtDepth}
+lapplyAtDepth <- function(LIST, DEPTH, FUN) {
+  if (DEPTH == 1) {
+    lapply(LIST, FUN)
+  } else {
+    lapply(LIST, function(l) lapplyAtDepth(l, DEPTH - 1, FUN))
+  }
+}
+```
+
+
+Unwrapping vectors
+
+
+```{r f-unwrap}
+unwrap <- function(l) unique(unlist(l))
+```
+
+
+Differences between shared elements of two vectors
+
+
+```{r f-calcVectorDiff}
+calcVectorDiff <- function(x, y, method, log = FALSE, base = exp(1)) {
+  # Shared elements by name
+  shared_nm <- intersect(names(x), names(y))
+  u <- x[names(x) %in% shared_nm]
+  v <- y[names(y) %in% shared_nm]
+  
+  # Difference
+  delta <- switch(
+    method,
+    absdiff = v-u,
+    ratio = v/u,
+    reldiff = (v-u)/u
+  )
+  
+  # Transform
+  if (isTRUE(log)) delta <- log(delta, base)
+  
+  # Filter
+  delta[!(is.na(delta) | is.infinite(delta))]
+}
+```
+
+
+Between matrix `calcVectorDiff`
+
+
+```{r f-calcMatrixDiff}
+calcMatrixDiff <- function(m1, m2, method, log = FALSE, base = exp(1)) {
+  # Matrices must share the same name for for at least 1 row and column
+  cond.dimnames <- any(colnames(m1) %in% colnames(m2)) &&
+    any(rownames(m1) %in% rownames(m2))
+  if (isFALSE(cond.dimnames)) {
+    stop("Matrices must share the same names for at least one row and column")
+  }
+  
+  # Set variables
+  cnames <- intersect(colnames(m1), colnames(m2))
+  result <- vector(mode = "list", length = length(cnames))
+  names(result) <- cnames
+  
+  # Iterate
+  for (i in seq_len(length(cnames))) {
+    cnm <- cnames[i]
+    x <- m1[, cnm]
+    y <- m2[, cnm]
+    result[[cnm]] <- calcVectorDiff(
+      x, y, method = method, log = log, base = base
+    )
+  }
+  
+  result
+}
+```
+
+
+Similarity between shared elements of two vectors
+
+
+```{r f-calcVectorJaccard}
+calcVectorJaccard <- function(x, y) {
+  # Shared elements by name
+  shared_nm <- intersect(names(x), names(y))
+  u <- x[names(x) %in% shared_nm]
+  v <- y[names(y) %in% shared_nm]
+  
+  uv <- t(cbind(u, v))
+  
+  # Similarity
+  1 - vegdist(uv, method = "jaccard")
+}
+```
+
+
+Similarity (column-wise) between shared elements of two matrices
+
+
+```{r f-calcMatrixJaccard}
+calcMatrixJaccard <- function(m1, m2) {
+  # Matrices must share the same name for for at least 1 row and column
+  cond.dimnames <- any(colnames(m1) %in% colnames(m2)) &&
+    any(rownames(m1) %in% rownames(m2))
+  if (isFALSE(cond.dimnames)) {
+    stop("Matrices must share the same names for at least one row and column")
+  }
+  
+  # Set variables
+  cnames <- intersect(colnames(m1), colnames(m2))
+  result <- vector(mode = "list", length = length(cnames))
+  names(result) <- cnames
+  
+  # Iterate
+  for (i in seq_len(length(cnames))) {
+    cnm <- cnames[i]
+    x <- m1[, cnm]
+    y <- m2[, cnm]
+    result[[cnm]] <- calcVectorJaccard(x, y)
+  }
+  
+  result
+}
+```
+
+
+Pairwise Pearson's correlation with significance testing via Monte Carlo resampling. Parallel threads used.
+
+
+```{r f-corPermMat2}
+corPermMat2 <- function(mat, path, workers = 1,
+                        k = 999, p.threshold = 2, rho.threshold = 2) {
+  # Initialise
+  if (workers > 1) {
+    plan(multisession, workers = workers)
+    cat("Running with multisession futures\n")
+  } else {
+    plan(sequential)
+    cat("Running with sequential futures\n")
+  }
+
+  on.exit(plan(sequential))
+
+  if (!dir.exists(path)) dir.create(path, recursive = TRUE)
+  cat("Outputs are here:\n")
+  cat("  ", path)
+
+  nr <- nrow(mat)
+
+  # Parallel correlations
+  future_lapply(seq_len(nr - 1), \(i) {
+
+    # Output
+    pid <- Sys.getpid()
+    filename <- paste0(path, "/corPermMat2_output.", pid, ".csv")
+
+    # Correlations
+    res <- lapply((i + 1):nr, \(j) {
+
+      S <- permcor(mat[i, ], mat[j, ], k)
+
+      if (abs(S[[1]]) < rho.threshold & S[[2]] > p.threshold) {
+
+        S <- NULL
+
+      } else {
+
+        c(
+          "node1"  = rownames(mat)[i],
+          "node2"  = rownames(mat)[j],
+          "rho"    = S[[1]],
+          "perm.p" = S[[2]]
+        )
+
+      }
+
+    })
+
+    # Convert list to data.table
+    res <- res[sapply(res, length) > 0]
+    res_dt <- as.data.table(list_transpose(res))
+
+    # Progress message
+    if (i %% 50 == 0) message(paste(i, "transcripts processed"))
+    if (i == nr - 1) message("Completed")
+
+    # Write output
+    fwrite(res_dt, file = filename, append = TRUE)
+
+  }, future.seed = TRUE, future.scheduling = Inf)
+
+}
+```
+
+
+Getting CAZymes based on substrates
+
+
+```{r f-get-CAZyme-by-substrate}
+getCAZyBySubstrate <- function(x, action, CAZyme_class) {
+  # Output should be a list of:
+  # 1. EC Numbers
+  # 2. CAZyme families
+  # 3. Specified action mode of the enzyme
+  
+  # Substrate
+  cols <- grep("Substrate", names(SUBSTRATE), value = TRUE)
+  f1 <- SUBSTRATE[
+    , Reduce(`|`, lapply(.SD, \(a) grepl(x, a))),
+    .SDcols = cols
+  ]
+  sb <- SUBSTRATE[f1]
+  
+  # Endolytic or Exolytic
+  ACTION <- c('endolytic', 'exolytic', 'all')
+  action <- ACTION[pmatch(action, ACTION)]
+  
+  if (action == "endolytic") sb <- sb[Endolytic == "Yes"]
+  if (action == "exolytic") sb <- sb[is.na(Endolytic)]
+  
+  # CAZyme class
+  p1 <- paste0(CAZyme_class, collapse = "|")
+  sb <- sb[sapply(Family, \(x) grepl(p1, x))]
+  
+  # Results
+  list(
+    "EC"     = unwrap(sb[, "EC_Number"]),
+    "Family" = unwrap(sb[, "Family"]),
+    "Action" = action
+  )
+}
+```
+
+
+General function that takes EC (and CAZyme family) and outputs relevant tables
+
+
+```{r f-find-CAZymes}
+findCAZymes <- function(EC) {
+  # Output should be a list of:
+  # 1. substrate from substrate table
+  # 2. hits from CAZYME
+  # 3. vector of latent bins split by habitat
+  # 4. vector of active bins split by habitat
+  # 5. matrix of genes with capacity split by habitat
+  # 6. matrix of transcripts split by habitat
+  
+  # EC can be a result from getCAZyBySubstrate or a vector of EC Numbers
+  if (is.list(EC)) {
+    ec <- EC$EC
+    fm <- EC$Family
+  } else {
+    ec <- EC
+  }
+  
+  pool <- unwrap(c(SUBSTRATE$EC_Number, CAZYME$EC))
+  if (!all(ec %in% pool)) 
+    stop("EC numbers do not exist in mapping files. Please check.")
+  
+  # Subset substrates
+  dat1 <- SUBSTRATE[EC_Number %chin% ec]
+  
+  # Subset hit list
+  cols <- c('bin', 'node', 'dbcan_label', 'tcdb_label', 'sulfatlas_label',
+            'signalp_prediction', 'transcription_regulation')
+  dat2 <- CAZYME[sapply(EC, \(x) any(x %in% ec))]
+  mags <- ANNOTATION[node %chin% dat2$NODE, ..cols]
+  dat2 <- dat2[mags, on = c("NODE" = "node")]
+  
+  # Additional Family-based subset as required
+  if (exists("fm")) {
+    dat1 <- dat1[Family %chin% fm]
+    dat2 <- dat2[FAMILY %chin% fm]
+  }
+  
+  # Gene and transcripts by habitat
+  dat3 <- lapply(PARTITION, \(l) l[["tpm"]]) %>%
+    lapplyAtDepth(2, \(m) {
+      DT <- as.data.table(m, keep.rownames = "NODE")[dat2, on = "NODE"]
+      f <- DT[, rowSums(!is.na(.SD)) > 0, .SDcols = patterns("^Sed|^Filt")]
+      DT[f]
+    })
+  
+  # Output
+  return(
+    list(
+      "substrates" = dat1,
+      "WGS"        = lapply(dat3, \(l) l[["WGS"]]),
+      "WTS"        = lapply(dat3, \(l) l[["WTS"]])
+    )
+  )
+  gc()
+}
+```
+
+
+Corrected genome size from contig sizes
+
+
+```{r f-genome-size}
+calcGenomeSize <- function(node2bin, checkm.stats) {
+  # Node required to extract information
+  contig.size <- node2bin[
+    , `:=`(contig = gsub("(.*)_\\d+$", "\\1", node),
+           size = as.numeric(gsub(".*_length_(\\d+)_cov.*", "\\1", node)))
+  ][
+    , node := NULL
+  ]
+  genome.size <- contig.size[, .(size = sum(size)), by = "bin"]
+  genome.size <- merge(unique(genome.size), checkm.stats, 
+                       by.x = "bin", by.y = "Rename", all.x = TRUE)
+  stats.cols <- c("Completeness", "Contamination")
+  genome.size[
+    , c(stats.cols) := lapply(.SD, \(x) x/100), 
+    .SDcols = stats.cols
+  ][
+    , genome.size := (size / Completeness) - (size * Contamination)
+  ]
+}
+```
+
+
+Proportions without `NA`
+
+
+```{r f-prop}
+fProportions <- function(x) {
+  x <- as.numeric(x)
+  if (sum(x) == 0)
+    numeric(length(x))
+  else
+    x / sum(x)
+}
+```
+
+
+
+# Derived data
+
+## Normalise with TPM
+
+Derive `TPM` from `COUNTS` and `ANNOTATION`.
+
+
+```{r tpm}
+TPM <- lapply(COUNTS, \(m) {
+  # Sanity check
+  chk <- all(ANNOTATION$node == rownames(m))
+  if (isFALSE(chk)) stop("Order matrices by node ID/check for missingness.")
+  
+  gene.length <- ANNOTATION$end - ANNOTATION$start + 1
+  if (isTRUE(chk)) calcTPM(m, gene.length)
+})
+```
+
+
+## Presence-absence
+
+
+```{r binary}
+BINARY <- lapply(COUNTS, \(m) ifelse(m > 0, 1, 0))
+```
+
+
+## Partition data
+
+Count data partitioned according to habitat and subset to non-zero components. This facilitates propagation of analyses based on partitioned data. Partitioned data are:
+
+-   Raw counts
+-   Binary
+-   TPM
+
+::: {callout-note}
+## Declare: Habitat type
+
+Habitat types are first created here.
+:::
+
+
+```{r declare-habitat}
+habitat <- c("water", "sediment")
+names(habitat) <- habitat
+```
+
+```{r partition-data}
+PARTITION <- lapply(habitat, \(s) {
+  # Set pattern to select columns
+  pattern <- ifelse(s == "water", "Filt", "Sed")
+  
+  # Numeric data
+  numdata <- c("COUNTS", "BINARY", "TPM")
+  NUMERIC_DATA <- lapplyAtDepth(
+    mget(numdata, envir = .GlobalEnv), 2, \(l) partMatrix(l, pattern)
+  )
+  names(NUMERIC_DATA) <- str_to_lower(numdata)
+  
+  NUMERIC_DATA
+})
+gc()
+```
+
+
+## Genome size
+
+
+```{r genome-size}
+GENOMESIZE <- calcGenomeSize(ANNOTATION[, c("node", "bin")], CHECKM)
+```
+
+
+
+# General statistics
+
+-   nMAG: Number of MAGs
+-   nMAGCAZ: Number of MAGs with putative GH or PL
+-   nCAZ: Number of GH or PL overall
+-   nGP: Number of GH or PL families
+
+
+```{r}
+genstat <- list(
+  "nMAG" = nrow(TAXONOMY),
+  "nMAGCAZ" = length(unique(
+    ANNOTATION[grepl("(GH|PL)", dbcan_label)]$bin
+  )),
+  "nCAZ" = nrow(ANNOTATION[grepl("(GH|PL)", dbcan_label)]),
+  "nGP" = length(unique(grep("(GH|PL)", CAZYME$FAMILY, value = T)))
+)
+
+mapply(\(i, nm) glue("{nm}: {i}"), genstat, names(genstat))
+```
+
+
+-   Average GH or PL expression in each sample
+
+
+```{r}
+lapply(PARTITION, \(l) {
+  m <- l$tpm$WTS
+  m <- m[rownames(m) %in% gp_node, ]
+  sort(apply(m, 2, \(x) mean(x[x > 0])))
+})
+```
+
+
+# Metatranscriptome correlations
+
+1.  Remove singletons and rank data
+
+
+```{r rank-tpm}
+rank_TPM <- lapply(PARTITION, \(l) {
+  m <- l$tpm$WTS
+  m <- m[rowsums(ifelse(m > 0, 1, 0)) > 1, ]
+  rowRanks(m)
+})
+```
+
+
+2.  Generate correlations
+
+> This part of the code is run on NeSI as a SLURM job to leverage the larger memory availability and multiple processors.
+
+The R code that is called in the job:
+
+``` {.python include="scripts/matpermcor.R" code-line-numbers="true"}
+```
+
+The job submission:
+
+``` {.python include="scripts/matpermcor.sl" code-line-numbers="true"}
+```
+
+3. (Safely) concatenate the results
+
+
+```{bash}
+#| eval: false
+
+# Do this where the output directories are, not within
+for i in */; do
+  printf "Processing %s\n" $i
+  # Set output per directory
+  outfile=corPermMat2_output."${i%%\/}".csv
+  > "$outfile"
+  printf "Outputs are here: %s\n" $outfile 
+  # Loop through CSV outputs per directory
+  for j in ${i}*.csv; do
+    printf "Processing %s\n" $j
+    # Append header from first file if output file is empty
+    if [ ! -s "$outfile" ]; then
+      printf "Appending header from %s\n" $j 
+      head -n 1 $j > $outfile
+    fi
+    # Append all other files to output
+    tail -n +2 $j >> $outfile
+  done
+done
+```
+
+
+4. Compress results and sync to R project directory
+
+
+```{bash}
+#| eval: false
+
+module load pigz rclone
+
+for i in *.csv; do
+  pigz -v -p 8 ${i}
+  rclone copy \
+    ${i}.gz \
+    jsboey_onedrive:Current\ Items/Projects/estuarine-CAZyme-diversity/data
+done
+```
+
+
+5. Backup scripts and compressed results to HPC project directory
+
+
+```{bash}
+#| eval: false
+
+for i in *csv.gz; do
+  cp ${i} /nesi/project/ga02676/Waiwera_project/boey_work/estuarine-CAZyme-diversity/data
+done
+
+for i in *.{R,sl}; do
+  cp ${i} /nesi/project/ga02676/Waiwera_project/boey_work/estuarine-CAZyme-diversity/scripts
+done
+```
+
+
+# Spatial distribution of CAZymes
+
+Distribution is divided according to:
+
+1.  Habitat (water column or sediment)
+2.  Salinity gradient (freshwater-brackish-marine)
+
+Results will be discussed according to habitats first, then according to salinity gradient.
+
+## Shared CAZymes between habitat type
+
+
+```{r gp-aggregate}
+GP_in_habitat <- lapply(PARTITION, \(l) l["binary"]) %>% 
+  unlist(recursive = FALSE, use.names = TRUE) %>% 
+  purrr::list_transpose() %>% 
+  lapplyAtDepth(., 2, \(m) {
+    # Extract CAZymes based on NODE matches
+    unwrap(CAZYME$FAMILY[CAZYME$NODE %in% rownames(m)]) %>% 
+      grep("(GH|PL)", ., value = TRUE)
+  }) %>% 
+  lapply(., \(l) rlang::set_names(l, \(s) str_remove(s, ".binary")))
+```
+
+
+Venn diagram of shared CAZyme latent potential.
+
+
+```{r venn-wgs}
+venn_all <- ggvenn(
+  GP_in_habitat$WGS,
+  fill_color = c("#25A7F8", "#F89812"), # For some reason, it doesn't take names.
+  fill_alpha = 0.5
+) +
+  labs(title = "WGS")
+```
+
+
+The CAZymes that are exclusive to sediment are:
+
+
+```{r}
+sed_exclusive <- Reduce(setdiff, GP_in_habitat$WGS[c(2, 1)]) %>% 
+  set_names(., .)
+
+sed_exclusive
+```
+
+
+The specific functions are putatively:
+
+
+```{r}
+sed_exclusive <- lapply(sed_exclusive, \(s) {
+  pattern <- glue("\\b{s}\\b")
+  as.data.table(CAZYME)[grepl(pattern, FAMILY)]
+})
+```
+
+
+-   **GH8** : endo-1,4-beta-xylanase (3.2.1.8), chitosanase (3.2.1.132)
+-   **GH164**: beta-mannosidase (3.2.1.25)
+-   **GH48** : cellulase (3.2.1.4), reducing end cellulose 1,4-beta-cellobiosidase (3.2.1.176)
+-   **PL3** : pectate lyase (4.2.2.2)
+-   **PL39** : alginate lyase (4.2.2.-)
+-   **GH87** : (putative) endo-alpha-1,3-glucanase/alpha-1,3-1,4-glucanase (3.2.1.59/3.2.1.61)
+-   **GH66** : dextranase (3.2.1.11)
+-   **PL4** : rhamnogalacturonan endolyase (4.2.2.23)
+
+Venn diagram of transcribed vs genetically encoded CAZymes in each habitat type.
+
+
+```{r venn-wgs-wts}
+venn_water <- ggvenn(
+  purrr::transpose(GP_in_habitat)$water,
+  fill_alpha = 0.25,
+  auto_scale = TRUE
+) +
+  labs(title = "Water")
+
+venn_sediment <- ggvenn(
+  purrr::transpose(GP_in_habitat)$sediment,
+  fill_alpha = 0.25,
+  auto_scale = TRUE
+) +
+  labs(title = "Sediment")
+
+venn_water + venn_sediment
+```
+
+
+## CAZyme expression across habitats and salinity gradient
+
+TPM across a salinity gradient, faceted by habitat type
+
+
+```{r}
+# Convert wide to long
+TPM_long <- as.data.table(TPM$WTS, keep.rownames = "node") %>% 
+  melt(id.vars = "node", variable.name = "sample", value.name = "tpm")
+TPM_long <- TPM_long[
+  # Remove non-expressed
+  tpm > 0
+][
+  # Merge for salinity and type
+  METADATA[, .(sample, type, salinity)], on = "sample"
+][
+  # Print label
+  , label := paste0(sample, " (", salinity, ")")
+][
+  # Merge for CAZyme families
+  as.data.table(CAZYME)[, .(NODE, FAMILY)], on = c("node" = "NODE")
+][
+  # Subset to GH and PL only
+  grepl("(GH|PL)", FAMILY)
+][
+  # Replace for CAZyme class
+  , FAMILY := gsub(".*(GH|PL).*", "\\1", FAMILY)
+]
+
+TPM_long <- na.omit(TPM_long)
+
+# Factorise label
+fct_TPM_long <- unique(TPM_long[, .(label, type, salinity)]) %>% 
+  setorder(., -type, salinity)
+
+TPM_long <- TPM_long[
+  , label := factor(label, levels = fct_TPM_long$label)
+]
+
+ggplot(TPM_long, aes(x = salinity, y = log10(tpm))) +
+  geom_point(alpha = 0.25, size = 0.5) +
+  geom_smooth(method = "loess", se = FALSE, span = 1, formula = y ~ x) +
+  labs(x = "Sample (salinity in ppt)",
+       y = "log10 TPM",
+       caption = "LOESS curves using all points (α = 1)") +
+  scale_colour_manual(values = cazyme_colour) +
+  facet_grid(FAMILY ~ type,
+             labeller = labeller(type = str_to_title),
+             space = "free_x", scales = "free_x") +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  )
+```
+
+
+## Latent and realised functional potential
+
+### Beta-diversity
+
+**Dimension reduction**
+
+
+```{r reduce-dim}
+# Distance matrix
+DIST <- mget(c("BINARY", "TPM")) %>%
+  unlist(recursive = F) %>%
+  mapply(\(m, nm) {
+    # Subset GH and PL nodes
+    node <- CAZYME$NODE[grep("(GH|PL)", CAZYME$FAMILY)]
+    # Subset matrix
+    m <- m[rowSums2(m) > 0 & rownames(m) %in% node,]
+    # Set method
+    method <- ifelse(grepl("BINARY", nm), "jaccard", "bray")
+    # Calculate distance matrix
+    vegdist(t(m), method = method)
+  }, ., names(.))
+```
+
+
+**Ordinations**
+
+
+```{r ordinations}
+#| include: false
+NMDS <- lapply(DIST, \(d) metaMDS(d, k = 2, try = 999, trymax = 5999))
+mapply(\(x, nm) plot(x, type = "text", main = nm), NMDS, names(NMDS), SIMPLIFY = FALSE)
+```
+
+
+**Permutational Multivariate Analysis of Variance (PERMANOVA)**
+
+
+```{r permanova}
+PERMANOVA <- lapply(DIST, \(d) {
+  # Subset metadata
+  data <- METADATA[sample %in% attr(d, "Labels"), ]
+  adonis2(d ~ type + salinity, data = data, by = "margin", permutations = 999)
+})
+```
+
+
+**Multivariate dispersion**
+
+
+```{r beta-dispersion}
+BDISP <- lapply(DIST, \(d) {
+  # Subset metadata
+  data <- METADATA[sample %in% attr(d, "Labels"), ]
+  disp <-betadisper(d, g = data$type)
+  sig <- permutest(disp)
+  
+  list(
+    "dispersion" = disp,
+    "p" = sig
+  )
+})
+
+mapply(\(x, nm) boxplot(x$dispersion, main = nm), BDISP, names(BDISP),
+       SIMPLIFY = FALSE)
+```
+
+
+**Plot ordinations with stats**
+
+
+```{r plot-nmds}
+ordination <- mapply(\(nmds, pv, nm) {
+  # Get coordinates & environmental data
+  scr <- as.data.table(scores(nmds), keep.rownames = "sample")
+  scr <- METADATA[, .(sample, type, salinity)][setDT(scr), on = "sample"]
+  
+  # Format digits in PERMANOVA tables
+  f <- function(x) format(round(x, 2), nsmall = 3)
+  pv2 <- as.data.table(pv)
+  pv2 <- pv2[, lapply(.SD, f), .SDcols = sapply(pv, is.numeric)]
+  
+  line_colour <- "grey70"
+  
+  p1 <- ggplot(data = scr, mapping = aes(x = NMDS1, y = NMDS2)) +
+    geom_hline(yintercept = 0, colour = line_colour) +
+    geom_vline(xintercept = 0, colour = line_colour) +
+    geom_point(aes(colour = salinity, shape = type)) +
+    labs(
+      title = nm,
+      colour = "Salinity (ppt)",
+      shape = "Habitat type"
+    ) +
+    scale_colour_viridis_c() +
+    scale_shape_manual(
+      values = habitat_shape,
+      labels = str_to_title
+    ) +
+    theme_bw() +
+    theme(
+      panel.grid = element_blank(),
+      legend.position = "bottom"
+    )
+  
+  t1 <- tableGrob(
+    pv2, 
+    rows = rownames(pv),
+    theme = ttheme_default(
+      base_size = 8
+    )
+  )
+  
+  p1 / t1
+    
+}, NMDS, PERMANOVA, names(NMDS), SIMPLIFY = FALSE)
+
+ordination
+```
+
+
+**Plot beta dispersion test results**
+
+
+```{r boxplot-beta-dispersion}
+boxplot_bdisp <- mapply(\(x, nm) {
+  data <- x$dispersion
+  # Extract distance
+  dt <- data.table(
+    sample = names(data$distances),
+    distance = data$distances,
+    group = data$group
+  )
+  
+  # Plot
+  ggplot(data = dt) +
+    geom_boxplot(aes(x = group, y = distance)) +
+    labs(
+      x = "Habitat type",
+      y = "Dispersion",
+      title = nm,
+      caption = x$p$tab[1, 6]
+    ) +
+    theme_bw() +
+    theme(
+      panel.grid = element_blank()
+    )
+}, BDISP, names(BDISP), SIMPLIFY = FALSE)
+
+boxplot_bdisp
+```
+
+
+**Procrustes analyses**
+
+
+```{r procrustes-analysis}
+PROCRUSTES <- c("BINARY", "TPM") %>% 
+  setNames(., .)
+
+PROCRUSTES <- lapply(PROCRUSTES, \(dtype) {
+  # Subset distances
+  dlist <- DIST[paste0(dtype, ".", srctype)] %>% 
+    lapply(., \(d) {
+      m <- as.matrix(d)
+      m <- m[rownames(m) %in% overlap_samples, 
+             colnames(m) %in% overlap_samples]
+      as.dist(m)
+    })
+  # Ordinations
+  olist <- lapply(dlist, metaMDS, k = 2, try = 999, trymax = 5999, trace = 0)
+  protest(
+    X = olist[[1]], # Basis matrix 
+    Y = olist[[2]]  # Rotated to basis matrix
+  )
+})
+
+PROCRUSTES
+
+par(mfrow = c(1, 2))
+mapply(\(l, nm) plot(l, main = nm), PROCRUSTES, names(PROCRUSTES), SIMPLIFY = FALSE)
+```
+
+
+**Procrustes distance analyses**
+
+The linear models tested are:
+
+-   **A**: All samples
+-   **B**: Outlier removed
+-   **C**: Outlier and brackish removed
+
+
+```{r procrustes-residuals}
+# Gather Procrustes results
+
+PROCSCR <- lapply(PROCRUSTES, \(l) {
+  df <- as.data.table(cbind(l[["X"]], l[["Yrot"]], residuals(l)), 
+                      keep.rownames = "sample")
+  names(df)[-1] <- c("XNMDS1", "XNMDS2", "YrNMDS1", "YrNMDS2", "residuals")
+  METADATA[, .(sample, type, salinity)][df, on = "sample"]
+})
+
+# Linear models
+
+# (A) All samples
+# (B) Outlier removed (Outlier defined as > Q3 + 1.5 IQR)
+# (C) (B) & Brackish samples removed
+
+lmPROCSCR <- lapply(PROCSCR, \(df) {
+  
+  # Data for model A
+  A <- df
+  
+  # Data for model B
+  outlier_threshold <- quantile(df$residuals, 0.75) + (1.5 * IQR(df$residuals))
+  B <- df[residuals < outlier_threshold]
+  
+  # Data for model C
+  brackish_pattern <- "S3"
+  C <- B[!grepl(brackish_pattern, sample)]
+  
+  # Set formulae
+  f <- list(
+    "Habitat" = formula(residuals ~ type),
+    "Salinity" = formula(residuals ~ salinity)
+  )
+  
+  # Gather data frames
+  df.list <- mget(LETTERS[1:3])
+  
+  # Output
+  output1 <- expand.grid("formula" = f, "data" = df.list)
+  output2 <- expand.grid(
+    "variable.spec" = names(f), 
+    "model.spec" = names(df.list)
+  )
+  output <- cbind(output2, output1)
+  setDT(output)[
+    # Linear models and Spearman correlations
+    , `:=`(
+      model = lapply(1:.N, \(i) lm(formula[[i]], data[[i]])),
+      correlation = lapply(1:.N, \(i) {
+        data[[i]] %$% 
+          cor.test(residuals, salinity, method = "spearman")
+      })
+    )
+  ][
+    # Model coefficients and variable significance
+    , `:=`(
+      coeffs = lapply(model, coef),
+      varsig = lapply(model, anova)
+    )
+  ]
+  
+})
+
+# Results
+
+lmPROCSCR_result <- lapply(lmPROCSCR, \(dt) {
+  dt <- copy(dt)
+  dt[
+    , `:=`(
+      n          = sapply(data, nrow),
+      variable   = sapply(formula, \(x) as.character(x)[3]),
+      intercept  = sapply(coeffs, \(x) x[1]),
+      slope      = sapply(coeffs, \(x) x[2]),
+      variable.p = sapply(varsig, \(x) x[1, ncol(x)]),
+      r2         = sapply(model, \(x) summary(x)$adj.r.squared),
+      rho        = sapply(correlation, \(x) x[["estimate"]]),
+      rho.p      = sapply(correlation, \(x) x$p.value)
+    )
+  ][
+    # Retain relevant columns
+    , .SD, .SDcols = sapply(dt, \(x) !is.list(x))
+  ]
+})
+
+```
+
+
+**Plot Procrustes ordination**
+
+
+```{r plot-procrustes-ordination}
+ordination_proc <- mapply(\(dt, proc, nm) {
+  # Extract slopes for rotational guides
+  rot <- proc$rotation
+  rot_m <- vector(mode = "numeric", length = 2)
+  for (i in seq_len(nrow(rot))) {
+    rot_m[i] <- rot[i, 2]/rot[i, 1]
+  }
+  rot_lines <- data.frame(
+    intercept = c(0, 0),
+    slope = rot_m
+  )
+  
+  line_colour <- "grey70"
+  segment_colour <- "cornflowerblue"
+  
+  # Ordination
+  ggplot() +
+    geom_hline(yintercept = 0, linetype = 2, colour = line_colour) +
+    geom_vline(xintercept = 0, linetype = 2, colour = line_colour) +
+    geom_abline(
+      data = rot_lines,
+      mapping = aes(
+        intercept = intercept,
+        slope = slope
+      ),
+      colour = line_colour
+    ) +
+    geom_segment(
+      data = dt,
+      mapping = aes(
+        x = XNMDS1,
+        y = XNMDS2,
+        xend = YrNMDS1,
+        yend = YrNMDS2
+      ),
+      arrow = arrow(
+        angle = 30,
+        length = unit(3, "points")
+      ),
+      colour = segment_colour
+    ) +
+    geom_point(
+      data = dt,
+      mapping = aes(
+        x = XNMDS1,
+        y = XNMDS2,
+        colour = salinity,
+        shape = type
+      )
+    ) +
+    labs(
+      title = nm,
+      x = "NMDS1",
+      y = "NMDS2",
+      colour = "Salinity (ppt)",
+      shape = "Habitat type" 
+    ) +
+    scale_colour_viridis_c() +
+    scale_shape_manual(
+      values = habitat_shape,
+      labels = str_to_title
+    ) +
+    theme_bw() +
+    theme(
+      aspect.ratio = 1,
+      panel.grid = element_blank()
+    )
+  
+}, PROCSCR, PROCRUSTES, names(PROCSCR), SIMPLIFY = FALSE)
+
+wrap_plots(ordination_proc, guides = "collect") &
+  theme(legend.position = "bottom")
+```
+
+
+**Plot Procrustes residual analysis results**
+
+Remove Habitat models and model C prior to plotting fit.
+
+
+```{r plot-lm-procrustes-residuals}
+scatter_proclm <- mapply(\(dtPoint, dtLine, nm) {
+  dtLine <- dtLine[variable.spec != "Habitat" & model.spec != "C"]
+  labels_lty <- paste0(
+    c("All samples (n = ", "Outlier removed (n = "), 
+    dtLine$n,
+    rep(")", times = 2)
+  )
+  bounds <- quantile(dtPoint$residuals, c(0.25, 0.75))
+    
+  ggplot() +
+    annotate(
+      geom = "rect",
+      xmin = -Inf,
+      xmax = Inf,
+      ymin = bounds[1],
+      ymax = bounds[2],
+      fill = "grey80",
+      alpha = 0.5
+    ) +
+    geom_point(
+      data = dtPoint,
+      mapping = aes(
+        x = salinity,
+        y = residuals,
+        colour = type,
+        shape = type
+      )
+    ) +
+    geom_abline(
+      data = dtLine,
+      mapping = aes(
+        intercept = intercept,
+        slope = slope,
+        linetype = model.spec
+      )
+    ) +
+    labs(
+      title = nm,
+      x = "Salinity (ppt)",
+      y = "Procrustes residuals",
+      colour = "Habitat type",
+      linetype = "Data subset"
+    ) +
+    scale_y_continuous(
+      limits = c(0, 0.3)
+    ) +
+    scale_colour_manual(
+      values = habitat_colour,
+      labels = str_to_title
+    ) +
+    scale_shape_manual(
+      values = habitat_shape,
+      labels = str_to_title
+    ) +
+    scale_linetype_manual(
+      values = c("dashed", "twodash"),
+      labels = labels_lty
+    ) +
+    theme_bw() +
+    theme(
+      panel.grid = element_blank(),
+      legend.position = "bottom"
+    )
+  
+}, PROCSCR, lmPROCSCR_result, names(PROCSCR), SIMPLIFY = FALSE)
+
+wrap_plots(scatter_proclm, guides = 'collect') &
+  theme(legend.position = 'bottom')
+```
+
+
+#### Log-ratio analyses
+
+Linear model analyses of Procrustes residuals show
+
+1.  Increased coupling between latent and realised functional potentials with increasing salinity
+2.  Strong decoupling in a few non-saline sediment samples
+
+This analysis aims to determine:
+
+1.  General patterns in direct analyses of the gene/transcript difference
+2.  Potential GH or PL encoding genes/transcripts that may have led to this decoupling
+
+
+```{r log-ratio-wts-wgs}
+WTSdiffWGS <- lapply(TPM, \(m) {
+  # Filter
+  m <- m[rownames(m) %in% gp_node, colnames(m) %in% overlap_samples]
+  m[rowSums2(m) > 0, ]
+}) %>% 
+  Reduce(
+    \(wgs, wts) calcMatrixDiff(wgs, wts, method = "ratio", log = TRUE, base = 2), .
+  ) %>% 
+  lapply(., \(delta) as.data.table(delta, keep.rownames = "node")) %>% 
+  rbindlist(., idcol = "sample")
+
+WTSdiffWGS <- METADATA[, .(sample, type, salinity)][
+  WTSdiffWGS, on = "sample"
+]
+
+
+ggplot(WTSdiffWGS) +
+  geom_point(aes(x = salinity, y = delta)) +
+  labs(x = "Salinity (ppt)", 
+       y = "Transcript : Gene TPM") +
+  facet_grid(. ~ type, labeller = labeller(type = str_to_title)) +
+  theme_bw()
+```
+
+
+While there are some big discrepancies in WTS/WGS ratios, it is unlikely that those genes/transcripts are driving the Procrustes residuals. Based on the observations on the Procrustes residuals from BINARY data, the genes/transcripts that are likely driving the Procrustes residuals might benefit from identification via binary analysis.
+
+#### Binary transcript/gene analyses
+
+
+```{r jaccard-wts-wgs}
+WTSjaccardWGS <- lapply(BINARY, \(m) {
+  m <- m[rownames(m) %in% gp_node, colnames(m) %in% overlap_samples]
+  m[rowSums2(m) > 0, ]
+}) %>% 
+  Reduce(\(wgs, wts) calcMatrixJaccard(wgs, wts),. )
+
+WTSjaccardWGS <- data.table(
+  sample = names(WTSjaccardWGS),
+  jaccard = sapply(WTSjaccardWGS, \(x) as.vector(x))
+)
+
+WTSjaccardWGS <- METADATA[, .(sample, type, salinity)][
+  WTSjaccardWGS, on = "sample"
+]
+
+ggplot(WTSjaccardWGS) +
+  geom_text(aes(x = salinity, y = jaccard, label = sample)) +
+  facet_grid(. ~ type, space = "free_x", scales = "free_x") +
+  theme_bw()
+```
+
+
+### Alpha-diversity
+
+
+```{r alpha-diversity}
+ADIV <- lapply(TPM, \(m) {
+  m <- m[rowSums2(m) > 0 & rownames(m) %in% gp_node, ]
+  
+  data.table(
+    "sample"   = colnames(m),
+    "richness" = specnumber(m, MARGIN = 2),
+    "simpsons" = diversity(m, index = "invsimpson", MARGIN = 2)
+  )
+}) %>% 
+  rbindlist(idcol = "srctype")
+
+# Join with metadata and derive evenness 
+ADIV <- METADATA[
+  , .(sample, salinity, type)
+][
+  ADIV, on = "sample"
+][
+  , evenness := simpsons/richness
+]
+```
+
+```{r plot-alpha-diversity}
+melt(
+  ADIV,
+  id.vars = c("sample", "srctype", "type", "salinity"),
+  measure.vars = c("richness", "simpsons", "evenness"),
+  variable.name = "index",
+  value.name = "value"
+) %>%
+  ggplot(mapping = aes(x = salinity,
+                       y = value,
+                       colour = type)) +
+  stat_smooth(method = "loess", se = F, linetype = 2, span = 1) +
+  geom_point() +
+  labs(x = "Salinity (ppt)",
+       colour = "Habitat type") +
+  scale_colour_manual(values = habitat_colour,
+                      labels = str_to_title) +
+  facet_wrap(
+    srctype ~ index, 
+    scales = "free_y", 
+    labeller = labeller(
+      index = c(
+        "richness" = "Richness",
+        "simpsons" = "Simpson's diversity (1/λ)",
+        "evenness" = "Simpson's evenness"
+      ),
+      srctype = c(
+        "WGS" = "Gene", 
+        "WTS" = "Transcript"
+      )
+    )
+  ) +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        axis.title.y = element_blank())
+```
+
+
+## Numerical properties of CAZyme genes and transcripts
+
+**Proportion of transcripts for CAZymes vs other metabolic functions**
+
+
+```{r proportion-cazyme-other}
+proportion_CAZyme <- lapply(COUNTS, \(m) {
+  # Create proportions table
+  pm <- proportions(m, margin = 2)
+  dt <- as.data.table(pm, keep.rownames = "node")
+  
+  colSums(dt[node %in% gp_node][, node := NULL]) * 100
+})
+```
+
+
+**Distribution properties of CAZyme normalised gene and transcript counts**
+
+
+```{r distribution-cazyme-tpm}
+gp_TPM <- lapply(TPM, \(m) {
+  m <- m[rownames(m) %in% gp_node, colnames(m) %in% overlap_samples]
+  DT <- as.data.table(m, keep.rownames = "node")
+  DT <- melt(DT, 
+             measure = patterns("^(Sed|Filt)"),
+             variable.name = "sample", value.name = "tpm")
+  METADATA[, .(sample, type, salinity)][DT, on = "sample"]
+}) %>% 
+  rbindlist(idcol = "srctype")
+
+ggplot(gp_TPM[tpm > 0]) +
+  geom_density(
+    aes(
+      x = log2(tpm),
+      fill = srctype,
+    ),
+    colour = NA,
+    alpha = 1/3
+  ) +
+  facet_wrap(sample ~ ., ncol = 3) +
+  labs(
+    x = "TPM-normalised Count (Log-scale)",
+    y = "Density",
+    fill = "Data type"
+  ) +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank()
+  )
+
+dcast(gp_TPM, ... ~ srctype, value.var = "tpm")[WGS > 0 & WTS > 0] %>% 
+ggplot(
+  mapping = aes(
+    x = log2(WGS),
+    y = log2(WTS)
+  )
+) + 
+  geom_point(size = 0.5, alpha = 0.5) +
+  facet_wrap(. ~ sample) +
+  labs(
+    x = "Gene count (per million, log2 scaled)",
+    y = "Transcript count (per million, log2 scaled)"
+  ) +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank()
+  )
+
+```
+
+
+# Thresholding for binary analysis
+
+For presence/absence | transcriptionally active/dormant type analysis, there needs to be some thresholding to determine what counts as present/active.
+
+## Bin presence
+
+To determine presence, I will use coverage breadth (i.e., number of bases covered by reads relative to the total contig size of a bin)
+
+
+```{r base-covered-bin}
+calcBinBaseCov <- function(contig.coverage, node2bin) {
+  # Format contig-bin mapping
+  contig2bin <- node2bin[
+    , contig := gsub("(.*)_\\d+$", "\\1", node)
+  ][
+    , node := NULL
+  ] %>% 
+    unique()
+  
+  # Add attributes to data table
+  coverage <- as.data.table(contig.coverage, keep.rownames = "contig")[
+    , total.size := attr(contig.coverage, "contig.length")
+  ]
+  
+  # Merge data and summarise
+  # cols_req <- c("total.size", colnames(contig.coverage))
+  merge(contig2bin, coverage, all.x = TRUE, by = "contig")[
+    , lapply(.SD, \(x) sum(x) / sum(total.size)), 
+    by = "bin", .SDcols = colnames(contig.coverage)
+  ]
+}
+
+bin_bcov <- calcBinBaseCov(
+  CONTIGMAP$WGS.basecov, ANNOTATION[, c("bin", "node")]
+) %>% 
+  as.matrix(rownames = "bin")
+```
+
+
+I'll use Emilie's cutoff at 10% coverage breadth
+
+
+```{r bin-present}
+# Apply cutoff
+MAG_present <- ifelse(bin_bcov < 0.1, 0, 1)
+
+par(mfrow = c(1, 2))
+# Cumulative frequency
+xlim <- c(min(bin_bcov), max(bin_bcov))
+ylim <- c(0, nrow(bin_bcov))
+plot(NA, xlim = xlim, ylim = ylim, type = "n",
+     ylab = "Cumulative number of MAGs", xlab = "MAG coverage breadth")
+for (j in 1:ncol(bin_bcov)) {
+  color <- ifelse(grepl("Filt", colnames(bin_bcov)[j]), "cornflowerblue", "firebrick2")
+  x <- sort(bin_bcov[, j])
+  br <- pretty(x, n = 25)
+  cf <- cumsum(table(cut(x, br)))
+  lines(c(0, cf) ~ br, col = color)
+}
+abline(v = 0.1, col = "black", lty = 2)
+rm(xlim, ylim, j, color, x, br, cf)
+
+barplot(colSums(MAG_present),
+        col = ifelse(grepl("Filt", colnames(bin_bcov)), 
+                     "cornflowerblue", "firebrick2"))
+```
+
+
+I suppose I expected this, there weren't that many reads for non-saline sediment to begin with anyway...
+
+## Bin active
+
+Emilie also used a coverage breadth threshold of 10% for transcripts, let's see how that holds up.
+
+
+```{r transcript-cov}
+bin_tcov <- calcBinBaseCov(
+  CONTIGMAP$WTS.basecov, ANNOTATION[, c("bin", "node")]
+) %>% 
+  as.matrix(rownames = "bin")
+
+par(mfrow = c(1, 2))
+# Cumulative frequency
+xlim <- c(min(bin_tcov), max(bin_tcov))
+ylim <- c(0, nrow(bin_tcov))
+plot(NA, xlim = xlim, ylim = ylim, type = "n",
+     ylab = "Cumulative number of MAGs", xlab = "MAG transcript coverage breadth")
+for (j in 1:ncol(bin_tcov)) {
+  color <- ifelse(grepl("Filt", colnames(bin_tcov)[j]), "cornflowerblue", "firebrick2")
+  x <- sort(bin_tcov[, j])
+  br <- pretty(x, n = 25)
+  cf <- cumsum(table(cut(x, br)))
+  lines(c(0, cf) ~ br, col = color)
+}
+abline(v = 0.1, col = "black", lty = 2)
+rm(xlim, ylim, j, color, x, br, cf)
+
+barplot(colSums(bin_tcov >= 0.1), 
+        col = ifelse(grepl("Filt", colnames(bin_tcov)), 
+                     "cornflowerblue", "firebrick2"))
+```
+
+
+Yikes... Pretty much no bins left in sediment... I wonder, which bin is hoarding all the transcripts in those environments? There's also relative actvity which I can use to compare values to.
+
+$$
+\textrm{MAG relative activity} = 
+\frac{
+  \textrm{Transcripts mapped to MAG}
+}{
+  \textrm{Total metatranscriptomic reads}
+} \times
+\frac{
+  \textrm{Total metagenome size}
+}{
+  \textrm{MAG size}
+}
+$$
+
+```{r bin-relative-activity}
+# Define relative activity
+calcRelativeActivity <- function(count, genome.size, bin2node) {
+  # Scaling factor: genome to metagenome size
+  genome.size <- set_names(genome.size$genome.size, genome.size$bin)
+  metagenome.size <- sum(genome.size)
+  scaling <- metagenome.size / genome.size
+  
+  # Per MAG transcript proportions
+  dt <- merge(bin2node, as.data.table(count, keep.rownames = "node"),
+              by = "node", all.x = TRUE)
+  num_cols <- colnames(count)
+  DT <- dt[
+    , lapply(.SD, sum), 
+    .SDcols = num_cols, by = "bin"
+  ][
+    , (num_cols) := lapply(.SD, fProportions), .SDcols = num_cols
+  ]
+  m <- as.matrix(DT, rownames = "bin")
+  
+  # Scale proportions
+  scaling <- scaling[order(match(names(scaling), rownames(m)))]
+  sweep(m, 1, scaling, "*")
+}
+
+MAG_relativeActivity <- calcRelativeActivity(
+  COUNTS$WTS, GENOMESIZE, ANNOTATION[, c("bin", "node")]
+)
+```
+
+```{r transcript-per-bin}
+node2bin <- set_names(
+  as.character(ANNOTATION$bin),
+  as.character(ANNOTATION$node)
+)
+node2bin <- node2bin[order(match(names(node2bin), rownames(TPM$WTS)))]
+bin_tpm <- rowsum(TPM$WTS, node2bin) # used as an output generator
+bin_tpm_mean <- bin_tpm
+for (j in 1:ncol(TPM$WTS)) {
+  bin_tpm_mean[, j] <- tapply(TPM$WTS[, j], node2bin, mean)
+  rm(j)
+}
+```
+
+
+Applying an arbitrary threshold:
+
+A MAG is active if it has a mean TPM $\ge 10$.
+
+
+```{r}
+MAG_active <- ifelse(bin_tpm_mean < 10, 0, 1)
+
+par(mfrow = c(1, 2))
+# Cumulative frequency
+xlim <- c(min(bin_tpm_mean), max(bin_tpm_mean))
+ylim <- c(0, nrow(bin_tpm_mean))
+plot(NA, xlim = xlim, ylim = ylim, type = "n",
+     ylab = "Cumulative number of MAGs", xlab = "MAG TPM")
+for (j in 1:ncol(bin_tpm_mean)) {
+  color <- ifelse(grepl("Filt", colnames(bin_tpm_mean)[j]), "cornflowerblue", "firebrick2")
+  x <- sort(bin_tpm_mean[, j])
+  br <- pretty(x, n = 25)
+  cf <- cumsum(table(cut(x, br)))
+  lines(c(0, cf) ~ br, col = color)
+}
+abline(v = 0.1, col = "black", lty = 2)
+rm(xlim, ylim, j, color, x, br, cf)
+
+barplot(colSums(MAG_active), 
+        col = ifelse(grepl("Filt", colnames(bin_tpm_mean)), 
+                     "cornflowerblue", "firebrick2"))
+```
+
+
+# Functional redundancy and competition
+
+> Functional redundancy is the potential for competition
+
+The level of functional redundancy is tied to how the function is categorised. Functional redundancy here is defined as follows:
+
+1. Function: Endolytic, polysaccharide-degrading GH and PL with assigned EC numbers
+2. Redundancy: The number of populations that are putatively capable of performing the function estimated based on per population aggregate of metagenomic gene presence-absence data.
+
+A contrasting picture against terminal CAZymes would be great.
+
+This analysis will first explore functional redundancy partitioned by habitat substrate (water column and sediment). Following that, the analysis will be partitioned along the salinity gradient per habitat substrate.
+
+The same analysis is run for transcriptomic data to ascertain competition.
+
+## Define substrates and CAZymes
+
+
+```{r def-cazymes}
+endozyme <- c(
+  "3.2.1.4", 
+  "3.2.1.1", 
+  "3.2.1.8", 
+  "3.2.1.78",
+  "3.2.1.14",
+  "laminarin", 
+  "pectin",
+  "alginate", 
+  "ulvan"
+)
+names(endozyme) <- ifelse(
+  grepl("^\\d", endozyme), 
+  c("cellulose", "starch_glycogen", "xylan", "beta_mannan", "chitin"),
+  endozyme
+)
+
+exozyme <- c(
+  "b_Glc" = "3.2.1.21", 
+  "a_Glc" = "3.2.1.20", 
+  "b_Gal" = "3.2.1.23", 
+  "a_Man" = "3.2.1.24", 
+  "b_Man" = "3.2.1.25",
+  "b_Xyl" = "3.2.1.37", 
+  "b_Fuc" = "3.2.1.38", 
+  "a_Rha" = "3.2.1.40",
+  "a_LFuc" = "3.2.1.51",
+  "b_HexNAc" = "3.2.1.52",
+  "a_LAraf" = "3.2.1.55"
+)
+```
+
+
+## Get genes and transcripts
+
+
+```{r}
+endozyme <- lapply(endozyme, \(s) {
+  if (grepl("^\\d", s)) {
+    findCAZymes(s)
+  } else {
+    # Do not capture:
+    # Laminarin: 3.2.1.73 & 3.2.1.75
+    
+    a <- getCAZyBySubstrate(s, "endo", c("GH", "PL"))
+    
+    if (s == "laminarin") {
+      a$EC <- a$EC[!grepl("(3.2.1.73|3.2.1.75)", a$EC)]
+    }
+    
+    findCAZymes(a)
+  }
+})
+
+exozyme <- lapply(exozyme, findCAZymes)
+```
+
+
+## Basic stats
+
+Number of bins with function:
+
+
+```{r}
+lapply(endozyme, \(l) l$WTS) %>% 
+  lapplyAtDepth(2, \(dt) dt$bin) %>% 
+  unwrap() %>% 
+  length()
+```
+
+
+Checking family-EC matches
+
+
+```{r}
+chkECfam <- function(subs, x) {
+  lapply(
+    endozyme[[subs]]$WGS, 
+    \(dt) {
+      dt[sapply(EC, \(s) x %in% s), .(FAMILY, EC)]$FAMILY
+    }
+  ) %>% 
+    unwrap() %>% 
+    str_sort(numeric = T)
+}
+
+chkECfam("ulvan", "4.2.2.-")
+```
+
+
+How many MAGs capable?
+
+
+```{r}
+lapply(endozyme$cellulose$WGS, \(dt) length(unwrap(dt$bin)))
+```
+
+
+## Sub-functions for aggregating bins
+
+**Redundancy within habitat substrate**
+
+
+```{r}
+getHabitatRedundancy <- function(LIST, srctype, constraint=NULL) {
+  if (!is.null(constraint)) {
+    is.mat <- is.matrix(constraint)
+    has.rn <- is.character(rownames(constraint))
+    is.bin <- is.numeric(constraint) & min(constraint) == 0 & max(constraint) == 1
+    if (!all(is.mat, has.rn, is.bin)) 
+      stop("constraint must be a binary matrix with MAG/bin names as rownames.")
+  }
+  
+  lapply(LIST, \(l) l[[srctype]]) %>% 
+    lapplyAtDepth(2, \(dt) {
+      # Get bins from non-zero counts
+      bin <- unique(dt$bin)
+      
+      if (is.null(constraint)) return(bin)
+      
+      # Constrain to thresholded MAGs
+      common_col <- intersect(colnames(constraint), names(dt))
+      mags <- rownames(constraint)[rowSums(constraint[, common_col]) > 0]
+      intersect(bin, mags)
+    })
+}
+```
+
+
+**Redundancy across salinity**
+
+
+```{r}
+getSalinityRedundancy <- function(LIST, srctype, constraint=NULL) {
+  if (!is.null(constraint)) {
+    is.mat <- is.matrix(constraint)
+    has.rn <- is.character(rownames(constraint))
+    is.bin <- is.numeric(constraint) & min(constraint) == 0 & max(constraint) == 1
+    if (!all(is.mat, has.rn, is.bin)) 
+      stop("constraint must be a binary matrix with MAG/bin names as rownames.")
+  }
+  lapply(LIST, \(l) l[[srctype]]) %>%
+    lapplyAtDepth(2, \(dt) {
+      # Sum per sample by bin
+      bin_dt <- dt[
+        , .SD,
+        .SDcols = patterns("bin|Sed|Filt")
+      ][
+        , lapply(.SD, sum), by = "bin"
+      ]
+      
+      # Binary conversion
+      binary_dt <- copy(bin_dt)
+      numcols <- grep("Sed|Filt", colnames(binary_dt), value = T)
+      binary_dt[, (numcols) := lapply(.SD, \(x) ifelse(x > 0, 1, 0)),
+                .SDcols = patterns("Sed|Filt")]
+      binary_m <- as.matrix(binary_dt, rownames = "bin")
+      
+      if (is.null(constraint)) return(colSums(binary_m))
+      
+      # Check against MAG constraints
+      mags <- constraint[rownames(constraint) %in% bin_dt$bin, 
+                         colnames(constraint) %in% colnames(binary_dt)]
+      
+      # mags can be vector if only 1 bin, modify operations for larger than 2
+      if (is.matrix(mags) && nrow(mags) > 1) {
+        mags <- mags[order(match(rownames(mags), bin_dt$bin)), ]
+      }
+      
+      colSums(binary_m * mags)
+    }) %>%
+    purrr::list_transpose() %>%
+    lapply(\(l) as.data.table(as.data.frame(l), keep.rownames = "sample")) %>%
+    rbindlist()
+}
+```
+
+
+## Functional redundancy
+
+
+```{r}
+FR_habitat <- list(
+  "endo" = getHabitatRedundancy(endozyme, "WGS", MAG_present),
+  "exo" = getHabitatRedundancy(exozyme, "WGS", MAG_present)
+)
+
+FR_habitat_dt <- lapplyAtDepth(FR_habitat, 3, length) %>% 
+  lapply(\(l) {
+    dt <- purrr::list_transpose(l) %>% 
+      as.data.frame(., row.names = names(l)) %>% 
+      as.data.table(., keep.rownames = "substrate") %>% 
+      .[order(water)]
+    # Scale by number of MAGs present in each habitat
+    mag_present <- c("Filt", "Sed") %>% 
+      set_names(., c("water", "sediment"))
+    mag_present <- sapply(mag_present, \(x) {
+      m <- MAG_present[, grepl(x, colnames(MAG_present))]
+      sum(rowsums(m) > 0)
+    })
+    for (i in c("water", "sediment")) {
+      nm <- paste0(i, "_scaled")
+      dt[, (nm) := .SD[[i]] * 100 / mag_present[[i]]]
+    }
+    return(dt)
+  })
+
+FR_salinity <- list(
+  "endo" = getSalinityRedundancy(endozyme, "WGS", MAG_present),
+  "exo" = getSalinityRedundancy(exozyme, "WGS", MAG_present)
+)
+
+FR_salinity_scaled <- lapply(FR_salinity, \(dt) {
+  m <- as.matrix(dt, rownames = "sample")
+  as.data.table(
+    sweep(m, 1, colSums(MAG_present), "/") * 100,
+    keep.rownames = "sample"
+  )
+})
+  
+```
+
+
+Plot results: Habitat
+
+
+```{r}
+barplot_FR_habitat <- lapply(FR_habitat_dt, \(dt) {
+  # Data preparation
+  DT <- melt(dt[, c("substrate", "water_scaled", "sediment_scaled")], 
+             measure.vars = c("water_scaled", "sediment_scaled"), 
+             variable.name = "habitat")
+  DT$habitat <- factor(DT$habitat, 
+                       levels = c("sediment_scaled", "water_scaled"),
+                       labels = c("sediment", "water"))
+  DT$substrate <- factor(DT$substrate, levels = dt$substrate)
+  upper.lim <- max(DT$value) + 10
+  
+  # Plot
+  pl <- ggplot(DT) +
+    geom_col(aes(
+      x = substrate, 
+      y = value, 
+      fill = habitat
+      ), position = "dodge"
+    ) +
+    coord_flip() +
+    labs(
+      y = "Percent MAGs with function relative to richness",
+      x = "Putative substrate",
+      fill = "Habitat substrate"
+    ) +
+    scale_fill_manual(values = habitat_colour, labels = str_to_title) +
+    scale_y_continuous(
+      expand = c(0, 0), 
+      limits = c(0, upper.lim)
+    ) +
+    theme_bw() +
+    theme(
+      panel.grid = element_blank()
+    )
+  
+  return(list("data" = DT, "figure" = pl))
+})
+
+barplot_FR_habitat
+```
+
+
+Plot results: Salinity
+
+
+```{r}
+heatmap_FR_salinity <- lapply(FR_salinity_scaled, \(dt) {
+  # Hierarchical clustering of substrate
+  m <- as.matrix(dt, rownames = "sample")
+  h <- hclust(dist(t(m)), method = "complete")
+  substrate.order <- h$labels[h$order]
+  
+  # Data preparation
+  DT <- melt(dt, id.vars = "sample", variable.name = "substrate")
+  DT <- DT[
+    , `:=`(substrate = factor(substrate, levels = substrate.order),
+           sample = factor(sample, levels = dt$sample),
+           habitat = ifelse(grepl("Filt", sample), "Water", "Sediment"))
+  ][
+    , habitat := factor(habitat, levels = c("Water", "Sediment"))
+  ]
+  
+  # Plot
+  pl <- ggplot(DT) +
+    geom_tile(aes(
+      x = sample, 
+      y = substrate, 
+      fill = value
+    )) +
+    scale_fill_viridis_c() +
+    scale_x_discrete(expand = c(0, 0)) +
+    scale_y_discrete(expand = c(0, 0)) +
+    labs(
+      x = "Sample",
+      y = "Putative substrates",
+      fill = "Percent MAGs relative to richness"
+    ) +
+    facet_grid(cols = vars(habitat), space = "free_x", scales = "free_x") +
+    theme_bw() +
+    theme(
+      panel.grid = element_blank(),
+      axis.text.x = element_text(angle = 90, hjust = 0, vjust = 0.5),
+      legend.position = "bottom"
+    )
+  
+  list("data" = DT, "hclust" = h, "figure" = pl)
+})
+
+heatmap_FR_salinity
+```
+
+
+## Competition
+
+
+```{r}
+CP_habitat <- list(
+  "endo" = getHabitatRedundancy(endozyme, "WTS", MAG_active),
+  "exo" = getHabitatRedundancy(exozyme, "WTS", MAG_active)
+)
+
+CP_habitat_dt <- lapplyAtDepth(CP_habitat, 3, length) %>% 
+  lapply(\(l) {
+    dt <- purrr::list_transpose(l) %>% 
+      as.data.frame(., row.names = names(l)) %>% 
+      as.data.table(., keep.rownames = "substrate") %>% 
+      .[order(water)]
+    # Scale by number of MAGs present in each habitat
+    mag_present <- c("Filt", "Sed") %>% 
+      set_names(., c("water", "sediment"))
+    mag_present <- sapply(mag_present, \(x) {
+      m <- MAG_present[, grepl(x, colnames(MAG_present))]
+      sum(rowsums(m) > 0)
+    })
+    for (i in c("water", "sediment")) {
+      nm <- paste0(i, "_scaled")
+      dt[, (nm) := .SD[[i]] * 100 / mag_present[[i]]]
+    }
+    return(dt)
+  })
+
+CP_salinity <- list(
+  "endo" = getSalinityRedundancy(endozyme, "WTS", MAG_active),
+  "exo" = getSalinityRedundancy(exozyme, "WTS", MAG_active)
+)
+
+CP_salinity_scaled <- lapply(CP_salinity, \(dt) {
+  m <- as.matrix(dt, rownames = "sample")
+  as.data.table(
+    sweep(m, 1, colSums(MAG_active), "/") * 100,
+    keep.rownames = "sample"
+  )
+})
+```
+
+
+Plot results: Habitat
+
+
+```{r}
+barplot_CP_habitat <- lapply(CP_habitat_dt, \(dt) {
+  # Data preparation
+  DT <- melt(dt[, c("substrate", "water_scaled", "sediment_scaled")], 
+             measure.vars = c("water_scaled", "sediment_scaled"), 
+             variable.name = "habitat")
+  DT$habitat <- factor(DT$habitat, 
+                       levels = c("sediment_scaled", "water_scaled"),
+                       labels = c("sediment", "water"))
+  DT$substrate <- factor(DT$substrate, levels = dt$substrate)
+  upper.lim <- max(DT$value) + 10
+  
+  # Plot
+  pl <- ggplot(DT) +
+    geom_col(aes(
+      x = substrate, 
+      y = value, 
+      fill = habitat
+      ), position = "dodge"
+    ) +
+    coord_flip() +
+    labs(
+      y = "Percent MAGs with function relative to all active MAGs",
+      x = "Putative substrate",
+      fill = "Habitat substrate"
+    ) +
+    scale_fill_manual(values = habitat_colour, labels = str_to_title) +
+    scale_y_continuous(
+      expand = c(0, 0), 
+      limits = c(0, upper.lim)
+    ) +
+    theme_bw() +
+    theme(
+      panel.grid = element_blank()
+    )
+  
+  return(list("data" = DT, "figure" = pl))
+})
+
+barplot_CP_habitat
+```
+
+
+Plot results: Salinity
+
+
+```{r}
+heatmap_CP_salinity <- lapply(CP_salinity_scaled, \(dt) {
+  # Hierarchical clustering of substrate
+  m <- as.matrix(dt, rownames = "sample")
+  h <- hclust(dist(t(m)), method = "complete")
+  substrate.order <- h$labels[h$order]
+  
+  # Data preparation
+  DT <- melt(dt, id.vars = "sample", variable.name = "substrate")
+  DT[
+    , `:=`(substrate = factor(substrate, levels = substrate.order),
+           sample = factor(sample, levels = dt$sample),
+           habitat = ifelse(grepl("Filt", sample), "Water", "Sediment"))
+  ][
+    , habitat := factor(habitat, levels = c("Water", "Sediment"))
+  ]
+  
+  # Plot
+  pl <- ggplot(DT) +
+    geom_tile(aes(
+      x = sample, 
+      y = substrate, 
+      fill = value
+    )) +
+    scale_fill_viridis_c() +
+    scale_x_discrete(expand = c(0, 0)) +
+    scale_y_discrete(expand = c(0, 0)) +
+    labs(
+      x = "Sample",
+      y = "Putative substrates",
+      fill = "Percent MAGs relative to all active MAGs"
+    ) +
+    facet_grid(cols = vars(habitat), space = "free_x", scales = "free_x") +
+    theme_bw() +
+    theme(
+      panel.grid = element_blank(),
+      axis.text.x = element_text(angle = 90, hjust = 0, vjust = 0.5),
+      legend.position = "bottom"
+    )
+  
+  list("data" = DT, "hclust" = h, "figure" = pl)
+})
+
+heatmap_CP_salinity
+```
+
+
+
+# Biogeochemical cycling and carbohydrate depolymerisation
+

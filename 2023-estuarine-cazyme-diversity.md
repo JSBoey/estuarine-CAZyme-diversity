@@ -1227,6 +1227,78 @@ bedtools coverage \
   > coverage/${bn}.cov.tsv
 ```
 
+The script above obtains coverage per gene, for relative activity, I need coverage per contig as well:
+
+`contig_cov.sl`
+
+```sh
+#!/bin/bash -e
+#SBATCH --job-name=ccov
+#SBATCH --account=ga02676
+#SBATCH --time=30:00
+#SBATCH --partition=milan
+#SBATCH --mem=16G
+#SBATCH --cpus-per-task=2
+#SBATCH --output=slurm_out/%x.%j.%A_%a.out
+#SBATCH --error=slurm_err/%x.%j.%A_%a.err
+#SBATCH --array=0-65
+
+module purge
+module load SAMtools/1.19-GCC-12.3.0
+
+arr=(alignments/bam/*.bam)
+in=${arr[$SLURM_ARRAY_TASK_ID]}
+bn=$(basename ${in} .bam)
+
+printf "Input: %s\n" ${in}
+
+printf "Calculating coverage\n"
+
+samtools coverage -o coverage/${bn}.contig_cov.tsv ${in}
+```
+
+Then get only relevant columns:
+
+`clean_contig_cov.sh`
+
+```sh
+#!/bin/bash -e
+
+xjoin() {
+    local f
+
+    if [ "$#" -lt 2 ]; then
+        echo "xjoin: need at least 2 files" >&2
+        return 1
+    elif [ "$#" -lt 3 ]; then
+        join "$1" "$2"
+    else
+        f=$1
+        shift
+        join "$f" <(xjoin "$@")
+    fi
+}
+
+for i in coverage/*.contig_cov.tsv; do
+  bn=$(basename $i .contig_cov.tsv)
+  printf "Processing %s\n" ${bn}
+  (head -n 1 ${i} && tail -n +2 ${i} | sort) \
+    | cut -f 1,4,5 \
+    | sed -e "s/numreads/${bn}.numreads/" -e "s/covbases/${bn}.covbases/" \
+    | sed -e 's/ /\t/g' \
+    > coverage/${bn}.contig_scov.tsv
+done
+
+for i in WGS WTS; do
+  printf "Joining %s\n" ${i}
+  xjoin coverage/${i}.*.contig_scov.tsv \
+    | sed 's/#//g' \
+    > ${i}.contig_coverage.tsv
+done
+
+printf "Completed\n"
+```
+
 ## 5.4 Join columns
 
 Outputs from `bedtools coverage` are the following columns:
@@ -1307,7 +1379,7 @@ Original outputs archived, compressed, and transferred to project directory:
 
 ```bash
 module load pigz
-tar -vc coverage/*.cov.tsv *.feature_coverage.tsv \
+tar -vc coverage/*.cov.tsv coverage/*.contig_cov.tsv *.feature_coverage.tsv *.contig_coverage.tsv \
   | pigz -p 8 \
   > $main/data/gene_transcript_coverage.tar.gz
 ```
@@ -1316,6 +1388,64 @@ Scripts transferred to project directory
 
 ```bash
 cp *.s{l,h} $main/scripts/
+```
+
+## 6. Read lengths
+
+Required for read coverage calculations
+
+Use BAM files generated prior
+
+`calc_read_length.sl`
+
+```sh
+#!/bin/bash -e
+#SBATCH --job-name=readlen
+#SBATCH --account=ga02676
+#SBATCH --time=20:00
+#SBATCH --mem=16G
+#SBATCH --cpus-per-task=32
+#SBATCH --output=slurm_out/%x.%j.%A_%a.out
+#SBATCH --error=slurm_err/%x.%j.%A_%a.err
+#SBATCH --array=0-65
+
+module purge
+module load SAMtools/1.19-GCC-12.3.0
+
+mkdir -p alignments/read_length
+
+arr=(alignments/bam/*.bam)
+file=${arr[$SLURM_ARRAY_TASK_ID]}
+base=$(basename ${file} .bam)
+out=alignments/read_length/${base}.rlen.tsv
+
+printf "Working on %s\n" ${file}
+printf "read_length\tcount\n" > ${out}
+
+samtools stats -@ $SLURM_CPUS_PER_TASK ${file} \
+  | grep ^RL \
+  | cut -f 2- \
+  >> ${out}
+```
+
+Concatenate individual files into one big file with relevant sample information
+
+`cat_read_length.sh`
+
+```sh
+#!/bin/bash -e
+
+printf "srctype\tsample\tread_length\tcount\n" > read_lengths.csv
+
+for file in alignments/read_length/*.tsv; do
+  name=$(basename ${file} .rlen.tsv)
+  srctype=$(echo ${name} | sed 's/\([A-Z]\+\)\..*/\1/g')
+  sample=$(echo ${name} | sed 's/[A-Z]\+\.\(.*\)/\1/g')
+  printf "Joining %s %s\n" ${srctype} ${sample}
+  tail -n+2 ${file} \
+    | sed "s/^/${srctype}\t${sample}\t/g" \
+    >> read_lengths.csv
+done
 ```
 
 ----

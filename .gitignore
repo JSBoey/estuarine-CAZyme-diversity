@@ -3,8 +3,16 @@ results/
 bin/
 data/
 test/
+figures/
+manual_curation/
+manuscript/
+statistics/
 .*
 _*
 *.RData
-analysis_workflow*
+*.Rhistory
+analysis_workflow*/
 .Rproj.user
+bin2*
+*.png
+scratch_script.R
