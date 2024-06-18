@@ -12,3 +12,4 @@ statistics/
 _*
 scratch_script.R
 .Rproj.user
+*.Rhistory
