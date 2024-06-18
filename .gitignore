@@ -5,8 +5,10 @@ data/
 test/
 figures/
 manual_curation/
+sandbox/
 manuscript/
 statistics/
 .*
 _*
 scratch_script.R
+.Rproj.user

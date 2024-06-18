@@ -8,18 +8,18 @@ srctype <- c("WGS", "WTS") %>%
   setNames(nm = .)
 
 # Numeric data
-COUNTS <- lapply(srctype, \(s) fread(glue("results/{s}_clean_count.tsv.gz")))
-CONTIGCOV <- lapply(srctype, \(s) fread(glue("data/{s}.contig_coverage.tsv")))
-RLEN <- fread("data/read_lengths.csv") %>%
+COUNTS <- lapply(srctype, \(s) fread(glue("data/{s}_clean_count.tsv.gz")))
+CONTIGCOV <- lapply(srctype, \(s) fread(glue("data/{s}.contig_coverage.tsv.gz")))
+RLEN <- fread("data/read_lengths.csv.gz") %>%
   split(., .$srctype)
 
 # Annotations
-ANNOTATION <- fread("results/curated_annotation_table.tsv")
-CHECKM <- fread("results/hq_bins.checkm_data.txt.gz")
-TAXONOMY <- fread("data/bin_taxonomy_final.txt")
+ANNOTATION <- fread("data/curated_annotation_table.tsv.gz")
+CHECKM <- fread("data/hq_bins.checkm_data.txt.gz")
+TAXONOMY <- fread("data/bin_taxonomy_final.txt.gz")
 CAZYME <- as.data.table(readRDS("data/curated_cazymes_substrates.rds"))
 METADATA <- fread("data/sample_metadata.txt")
-SUMMARY <- lapply(srctype, \(s) fread(glue("results/{s}_count.tsv.summary")))
+SUMMARY <- lapply(srctype, \(s) fread(glue("data/{s}_count.tsv.summary")))
 SUBSTRATE <- as.data.table(
   readxl::read_excel("data/curated_dbcansub_substrate_map_2.xlsx")
 )
@@ -106,24 +106,35 @@ CHECKM[
   , genome_size := (assembly_size * 100/completeness) - (assembly_size * contamination/100)
 ]
 
-# MAG relative abundance (read coverage) estimated based on 
-# Probst et al. (2018) doi:10.1038/s41564-017-0098-y
+# Bin coverage 
+# Based on Lander & Waterman (1988) doi:10.1016/0888-7543(88)90007-9
+# (r * l) / g 
+# r: Total reads mapped to a genome per sample
+# l: Average read length
+# g: Genome size
 BINCOV <- map2(
   keep_at(CONTIGCOV, \(x) grepl("numreads", x)),
   get_average_read_length(),
   \(m, rlen) {
+    
     DT <- as.data.table(m, keep.rownames = "contig") %>% 
       merge(bin2contig, ., all.x = TRUE, by = "contig")
+    
     DT[
-      , lapply(.SD, sum), 
+      , lapply(.SD, sum), # r
       .SDcols = patterns("contig_size|Sed|Filt"), by = "bin"
     ][
-      , lapply(.SD, \(x) x / contig_size),
+      , (names(rlen)) := Map(`*`, .SD, rlen), # rl
+      .SDcols = names(rlen)
+    ][
+      , lapply(.SD, \(x) x / contig_size), # rl/g
       .SDcols = patterns("Sed|Filt"), by = "bin"
     ] %>% 
       as.matrix(rownames = "bin")
   }
 )
+
+# For relative abundance of MAGs, refer to calc_bin_relative_abundance() in 0.functions.R
 
 # Clean up ----
 rm(srctype, tax_level, bin2contig)
