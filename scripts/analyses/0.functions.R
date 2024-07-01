@@ -3,6 +3,9 @@
 # This script holds all the convenience and custom functions for this project.
 
 # Convenience functions ----
+# Number of unique combinations
+n_comb <- function(n) 0.5 * n * n-1
+
 unwrap <- function(x) unique(unlist(x))
 
 threshold_matrix <- function(x, cutoff) {
