@@ -45,7 +45,7 @@ dynamicRequire(required_packages)
 permat <- function(x, k) replicate(k, x[sample.int(length(x), replace = FALSE)])
 
 # Spearman correlation with significance by permutation
-perm_sp_cor <- function(x, y, k) {
+perm_sp_cor <- function(x, y, k, t0_cut) {
   # Remove shared zeroes
   i <- rowSums(cbind(x, y)) > 0
   n <- sum(i)
@@ -54,6 +54,14 @@ perm_sp_cor <- function(x, y, k) {
   
   # Observed correlation
   t0 <- cor(x, y)
+  
+  if (abs(t0) < t0_cut) {
+    return(list("rho" = t0, 
+                "n" = n, 
+                "p" = NA, 
+                "p_lower" = NA, 
+                "p_upper" = NA))
+  }
   
   # Generate k permutations
   pY <- permat(y, k)
@@ -77,7 +85,8 @@ perm_sp_cor <- function(x, y, k) {
 parcor <- function(matrix, 
                    k = 1e3,
                    workers = 1,
-                   temp.path = "./tmp/") {
+                   temp.path = "./tmp/",
+                   t0_cut = 0) {
   # Init
   if (workers > 1) {
     plan(multisession, workers = workers)
@@ -102,13 +111,12 @@ parcor <- function(matrix,
         append(
           list("node1" = rownames(matrix)[i],
                "node2" = rownames(matrix)[j]),
-          perm_sp_cor(matrix[i, ], matrix[j, ], k = k)
+          perm_sp_cor(matrix[i, ], matrix[j, ], k = k, t0_cut = t0_cut)
         )
       })
       results <- as.data.table(list_transpose(results))
       
-      # Filter
-      
+      # Write out temporary files
       fwrite(results,
              file = temp.file,
              append = TRUE)
@@ -121,17 +129,19 @@ parcor <- function(matrix,
 
 # Parse options ----
 option_list <- list(
-  make_option("--in-file", type = "character", 
+  make_option("--in_file", type = "character", 
               help = "A TSV or CSV file where the first column is a unique identifier"),
-  make_option("--out-file", type = "character", default = "./parallel_permcor.csv",
+  make_option("--out_file", type = "character", default = "./parallel_permcor.csv",
               help = "Output file [defaults to %default]"),
   make_option("--threads", type = "integer", default = future::availableCores()[[1]],
               help = "Number of threads for parallel processing [default = all available cores]"),
   make_option("--permutations", type = "integer", default = 999,
               help = "Number of permutations to estimate significance [default = %default]"),
-  make_option("--tmp-dir", type = "character", default = paste0(getwd(), "/tmp/parallel_permcor"),
+  make_option("--cutoff", type = "double", default = 0,
+              help = "Correlation coefficient threshold [default = %default]"),
+  make_option("--tmp_dir", type = "character", default = paste0(getwd(), "/tmp/parallel_permcor"),
               help = "Temporary directory [default = ./tmp/parallel_permcor]"),
-  make_option("--keep-tmp-dir", type = "logical", 
+  make_option("--keep_tmp_dir", type = "logical", 
               action = "store_true", default = FALSE,
               help = "Keep temporary outputs")
 )
@@ -155,14 +165,15 @@ if (!is.numeric(m))
 parcor(matrix = m, 
        k = opt$permutations, 
        workers = opt$threads, 
-       temp.path = opt$tmp_dir)
+       temp.path = opt$tmp_dir,
+       t0_cut = opt$cutoff)
 
 ## Collate
 tmp_out <- list.files(path = opt$tmp_dir,
                       full.names = TRUE)
 
 for (tmpfile in tmp_out) {
-  fwrite(x = fread(tmpfile), file = opt$out_file, append = TRUE)
+  fwrite(x = na.omit(fread(tmpfile)), file = opt$out_file, append = TRUE)
 }
 
 ## Remove temporary files

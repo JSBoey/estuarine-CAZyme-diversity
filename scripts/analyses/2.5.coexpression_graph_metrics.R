@@ -36,7 +36,9 @@ option_list <- list(
   make_option("--graph", type = "character",
               help = "Path to graphs in GraphML format."),
   make_option("--out_path", type = "character",
-              help = "Output directory")
+              help = "Output directory"),
+  make_option("--cpus", type = "integer", default = 8,
+              help = "Number of CPUs [default: %default]")
 )
 
 prog_description <- "Calculates centralities and graph topologies and find communities from input graph"
@@ -47,8 +49,12 @@ opt <- parse_args(object = OptionParser(option_list = option_list,
                   convert_hyphens_to_underscores = TRUE)
 
 # Main ----
+if (!dir.exists(opt$out_path))
+  dir.create(opt$out_path, recursive=TRUE)
+
 ## Future topology
-workers <- availableCores()
+workers <- opt$cpus
+options(future.globals.maxSize = 800*1024^2)
 
 if (availableCores("multicore") > 1L) {
   plan(multicore, workers = workers)
@@ -112,7 +118,7 @@ global_metrics <- append(global_metrics,
                               "size_of_largest_component" = max(comp$csize))) 
 
 paste0(names(global_metrics), "\t", global_metrics) %>% 
-  writeLines(con = paste0(out_path, "/global_metrics.txt"))
+  writeLines(con = paste0(opt$out_path, "/global_metrics.txt"))
 
 cat(paste0("Computed global metrics\n"))
 

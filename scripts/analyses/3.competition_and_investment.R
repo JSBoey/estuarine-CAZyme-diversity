@@ -14,11 +14,11 @@ present_bins <- ifelse(
 )
 
 if (all(rownames(COUNTS$WTS) == names(get_gene_length()))) {
-  tpm <- calc_TPM(COUNTS$WTS, get_gene_length())
+  tpm <- calc_TPM(threshold_matrix(COUNTS$WTS, 5), get_gene_length())
 }
 
 ## Zero genes with < 5 transcript reads
-tpm[COUNTS$WTS < 5] <- 0
+# tpm[COUNTS$WTS < 5] <- 0
 
 # Unnest CAZYME
 cdt <- CAZYME[

@@ -122,7 +122,7 @@ for (i in seq_along(dG)) {
                      "_v", length(V(g)),
                      "e", length(E(g)))
   write_graph(g, filename, format = "graphml")
-  cat(paste0("Component ", i, "written\n"))
+  cat(paste0("Component ", i, " written\n"))
 }
 
 write_graph(sG,
@@ -131,5 +131,5 @@ write_graph(sG,
                    components(sG)$no,
                    ".graphml"),
             format = "graphml")
-cat(paste0("Subgraph written\nDone!"))
+cat(paste0("Subgraph written\nDone!\n"))
 
