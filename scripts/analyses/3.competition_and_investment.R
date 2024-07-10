@@ -96,14 +96,14 @@ fv.plt <- lapply(fv.env, \(dt) {
 fv.pltwp <- wrap_plots(fv.plt, widths = c(7, 20)) +
   plot_annotation(caption = "CAZyme gene profile per sample")
 
-walk(fig.fmt, \(fmt) {
-  ggsave(filename = glue("figures/cazyme_gene_profile.{fmt}"),
-         plot = fv.pltwp, 
-         width = 297, 
-         height = 210, 
-         units = 'mm', 
-         scale = 1)
-})
+# walk(fig.fmt, \(fmt) {
+#   ggsave(filename = glue("figures/cazyme_gene_profile.{fmt}"),
+#          plot = fv.pltwp, 
+#          width = 297, 
+#          height = 210, 
+#          units = 'mm', 
+#          scale = 1)
+# })
 
 
 ## Bin to function matrix
@@ -153,11 +153,11 @@ fv.bmt.plt <- lapply(fv.bmt, \(dt) {
                                      hjust = 1, 
                                      vjust = 0.5))
 })
-ggsave(
-  "sandbox/bin2cazyme2sample.matrix.tiff",
-  wrap_plots(fv.bmt.plt), 
-  width = 297, height = 210, units = "mm"
-)
+# ggsave(
+#   "sandbox/bin2cazyme2sample.matrix.tiff",
+#   wrap_plots(fv.bmt.plt), 
+#   width = 297, height = 210, units = "mm"
+# )
 
 # Spatial distribution of most transcriptionally active CAZyme genes
 # Heuristic: Substrate favoured at the community level
@@ -251,14 +251,14 @@ czdst.pltwp <- wrap_plots(czdst.plt,
                           guides = 'collect') +
   plot_annotation(caption = "Top 10 (per sample) transcriptionally active CAZymes")
 
-walk(fig.fmt, \(fmt) {
-  ggsave(filename = glue("figures/top10_transcribed_cazymes.{fmt}"),
-         plot = czdst.pltwp, 
-         width = 297, 
-         height = 210, 
-         units = 'mm', 
-         scale = 1)
-})
+# walk(fig.fmt, \(fmt) {
+#   ggsave(filename = glue("figures/top10_transcribed_cazymes.{fmt}"),
+#          plot = czdst.pltwp, 
+#          width = 297, 
+#          height = 210, 
+#          units = 'mm', 
+#          scale = 1)
+# })
 
 
 # Pick out terrestrial/riverine (pectin, cellulose, xylan), all (chitin), marine (laminarin, alginate, and ulvan) degrading CAZymes for functional profile and transcription spatial distribution
@@ -361,14 +361,14 @@ comp.pltwp <- wrap_plots(comp.plt,
                           guides = 'collect') +
   plot_annotation(caption = "Top 10 (per sample) CAZymes by Simpson's diversity")
 
-walk(fig.fmt, \(fmt) {
-  ggsave(filename = glue("figures/top10_competitive_cazymes.{fmt}"),
-         plot = comp.pltwp, 
-         width = 297, 
-         height = 210, 
-         units = 'mm', 
-         scale = 1)
-})
+# walk(fig.fmt, \(fmt) {
+#   ggsave(filename = glue("figures/top10_competitive_cazymes.{fmt}"),
+#          plot = comp.pltwp, 
+#          width = 297, 
+#          height = 210, 
+#          units = 'mm', 
+#          scale = 1)
+# })
 
 # Which populations are most invested in these substrates (see above)?
 # Proportion TPM normalised by MAG coverage
@@ -534,11 +534,11 @@ cinv.pltwp <- wrap_plots(cinv.plt,
                          guides = 'collect') +
   plot_annotation(caption = "Top 10 MAG investment (coverage corrected) in highly active endolytic CAZyme-encoding genes for highly competitive substrates.")
 
-walk(fig.fmt, \(fmt) {
-  ggsave(filename = glue("figures/top10_invested_endo_cazymes.{fmt}"),
-         plot = cinv.pltwp, 
-         width = 297, 
-         height = 210, 
-         units = 'mm', 
-         scale = 1)
-})
+# walk(fig.fmt, \(fmt) {
+#   ggsave(filename = glue("figures/top10_invested_endo_cazymes.{fmt}"),
+#          plot = cinv.pltwp, 
+#          width = 297, 
+#          height = 210, 
+#          units = 'mm', 
+#          scale = 1)
+# })
