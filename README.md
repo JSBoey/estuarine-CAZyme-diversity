@@ -2,19 +2,6 @@
 
 There were some reshuffling of bins prior to cross-assembly dereplication (dRep). This updated analysis will use DASTool outputs for annotations.
 
-## To do
-
-- [x] Copy relevant data to working directory
-- [x] Create concatenated query
-- [x] Set up test data
-- [x] Annotate for CAZymes
-- [x] Annotate for domains
-- [ ] Find CGCs
-- [ ] Harmonise CAZyme EC annotations
-- [ ] Identify substrate
-- [ ] Decide on threshold for representative bins
-- [ ] Read mapping, feature counting, and differential MAG coverage
-
 ## 0. Directory structure
 
 Working directory: `/nesi/nobackup/uoa00348/boey/2024-estuarine-cazyme-diversity`
